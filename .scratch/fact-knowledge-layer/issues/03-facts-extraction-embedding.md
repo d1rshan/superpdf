@@ -4,11 +4,11 @@
 
 **Blocked by:** 02 (Upload → parse → chunks).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Extraction produces Facts with evidence quote, page number, Qualifiers, confidence, and low-confidence flag per Chunk
-- [ ] Qualitative and numeric Facts both extract; value kept raw as stated (no normalization)
-- [ ] Facts are embedded and stored with their vector
-- [ ] Seam test: stubbed LLM/embedding output yields Facts with evidence and vectors in the database
-- [ ] Document cards display Fact counts after ingestion
-- [ ] `lint` and `typecheck` pass; committed in relevant checkpoints with conventional commit messages (multiple commits as work progresses, not one lump commit)
+- [x] Extraction produces Facts with evidence quote, page number, Qualifiers, confidence, and low-confidence flag per Chunk
+- [x] Qualitative and numeric Facts both extract; value kept raw as stated (no normalization)
+- [x] Facts are embedded and stored with their vector
+- [x] Seam test: stubbed LLM/embedding output yields Facts with evidence and vectors in the database
+- [x] Document cards display Fact counts after ingestion
+- [x] `lint` and `typecheck` pass; committed in relevant checkpoints with conventional commit messages (multiple commits as work progresses, not one lump commit)
