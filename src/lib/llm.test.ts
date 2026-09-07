@@ -7,6 +7,7 @@ test(
   async () => {
     const facts = await extractFacts(
       `[page 1]\nThe company reported revenue of ₹8,032 crore for FY24. On March 3, a director resigned.`,
+      "smoke-test",
     );
     expect(facts.length).toBeGreaterThan(0);
     for (const fact of facts) {

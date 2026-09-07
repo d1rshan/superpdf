@@ -19,7 +19,7 @@ type ParseFn = (
   bytes: Uint8Array,
   filename: string,
 ) => Promise<UnstructuredElement[]>;
-type ExtractFn = (text: string) => Promise<ExtractedFact[]>;
+type ExtractFn = (text: string, sessionId: string) => Promise<ExtractedFact[]>;
 type EmbedFn = (values: string[]) => Promise<number[][]>;
 
 export async function ingestDocument(
@@ -67,7 +67,7 @@ export async function ingestDocument(
         if (text) input.push(`[page ${page}]\n${text}`);
       }
       if (input.length === 0) continue;
-      for (const fact of await extract(input.join("\n\n"))) {
+      for (const fact of await extract(input.join("\n\n"), documentId)) {
         // ponytail: clamp instead of reject — a mis-cited page within the chunk still keeps the fact usable
         extracted.push({
           ...fact,

@@ -46,11 +46,13 @@ export function isLowConfidence(fact: { confidence: number }): boolean {
   return fact.confidence < LOW_CONFIDENCE_THRESHOLD;
 }
 
+// ponytail: muse models are served on the /responses endpoint only (see opencode.ai/zen docs); swap to .chat() when using chat-completions models
 function gateway() {
-  return createOpenAI({
+  const openai = createOpenAI({
     baseURL: env("LLM_BASE_URL"),
     apiKey: env("LLM_API_KEY"),
   });
+  return (model: string) => openai.responses(model);
 }
 
 const EXTRACTION_PROMPT = `You extract factual claims from a slice of a document. The text is prefixed with page markers like "[page 3]".
@@ -66,11 +68,15 @@ Return every distinct fact stated, both numeric (revenue, growth rates, counts) 
 
 Do not invent facts, infer values, or restate the same fact twice.`;
 
-export async function extractFacts(text: string): Promise<ExtractedFact[]> {
+export async function extractFacts(
+  text: string,
+  sessionId: string,
+): Promise<ExtractedFact[]> {
   const { object } = await generateObject({
     model: gateway()(llmModel()),
     schema: z.object({ facts: z.array(extractedFactSchema) }),
     prompt: `${EXTRACTION_PROMPT}\n\nDocument text:\n\n${text}`,
+    headers: { "x-opencode-session": sessionId },
   });
   return object.facts;
 }

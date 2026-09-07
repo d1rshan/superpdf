@@ -57,7 +57,7 @@ The system must generalize: no hard-coded facts, filenames, schemas, or document
 
 **Stack**: Next.js 16 (App Router) with Bun; TypeScript; Tailwind CSS v4. Deployment target is Vercel. Neon Postgres via Drizzle ORM with pgvector. Inngest for background pipelines (cloud on Vercel, dev server locally). Vercel Blob for raw PDFs. Vitest for tests.
 
-**LLM providers**: All LLM work (extraction, pairwise comparison) uses the opencode Go gateway with `muse-spark-contributor` as the default model, configured via environment variables and called with non-streaming structured-output requests (the gateway's muse streaming is unreliable). Any model must be swappable by env change. Embeddings use Google `gemini-embedding-001` truncated to 1536 dimensions to match the pgvector column (swapped by env change; no OpenAI key required).
+**LLM providers**: All LLM work (extraction, pairwise comparison) uses the opencode Go gateway with `muse-spark-1.3-contributor` (opencode Go gateway, `x-opencode-session` header required) as the default model, configured via environment variables and called with non-streaming structured-output requests (the gateway's muse streaming is unreliable). Any model must be swappable by env change. Embeddings use Google `gemini-embedding-001` truncated to 1536 dimensions to match the pgvector column (swapped by env change; no OpenAI key required).
 
 **Parsing**: Unstructured API parses uploads; its elements carry page numbers. Elements are grouped into page-grouped Chunks (a small batch of pages per Chunk, tables converted to markdown) — the Chunk builder is a pure function.
 
