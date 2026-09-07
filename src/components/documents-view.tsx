@@ -27,17 +27,26 @@ export function DocumentsView() {
   const [uploading, setUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const processingRef = useRef(false);
+
   const refresh = useCallback(async () => {
     const res = await fetch("/api/documents");
-    if (res.ok) setDocuments(await res.json());
+    if (res.ok) {
+      const list: DocumentRow[] = await res.json();
+      processingRef.current = list.some((d) => ACTIVE_STATUSES.has(d.status));
+      setDocuments(list);
+    }
   }, []);
 
   useEffect(() => {
-    refresh();
-    const processing = documents.some((d) => ACTIVE_STATUSES.has(d.status));
-    const interval = setInterval(refresh, processing ? 2000 : 10000);
-    return () => clearInterval(interval);
-  }, [refresh, documents]);
+    let timer: ReturnType<typeof setTimeout>;
+    const loop = async () => {
+      await refresh();
+      timer = setTimeout(loop, processingRef.current ? 2000 : 10000);
+    };
+    loop();
+    return () => clearTimeout(timer);
+  }, [refresh]);
 
   const upload = useCallback(
     async (file: File) => {
