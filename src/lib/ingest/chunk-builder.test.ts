@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { buildChunks, tableToMarkdown, type UnstructuredElement } from "./chunk-builder";
+import {
+  buildChunks,
+  tableToMarkdown,
+  type UnstructuredElement,
+} from "./chunk-builder";
 
 function el(
   text: string,
@@ -7,7 +11,11 @@ function el(
   type = "NarrativeText",
   textAsHtml?: string,
 ): UnstructuredElement {
-  return { type, text, metadata: { page_number: pageNumber, text_as_html: textAsHtml } };
+  return {
+    type,
+    text,
+    metadata: { page_number: pageNumber, text_as_html: textAsHtml },
+  };
 }
 
 describe("buildChunks", () => {
@@ -20,8 +28,13 @@ describe("buildChunks", () => {
   });
 
   test("single page of elements becomes one chunk", () => {
-    const chunks = buildChunks([el("Revenue grew.", 1), el("Margins improved.", 1)]);
-    expect(chunks).toEqual([{ pageStart: 1, pageEnd: 1, text: "Revenue grew.\n\nMargins improved." }]);
+    const chunks = buildChunks([
+      el("Revenue grew.", 1),
+      el("Margins improved.", 1),
+    ]);
+    expect(chunks).toEqual([
+      { pageStart: 1, pageEnd: 1, text: "Revenue grew.\n\nMargins improved." },
+    ]);
   });
 
   test("pages are grouped in batches of PAGES_PER_CHUNK", () => {
@@ -36,7 +49,8 @@ describe("buildChunks", () => {
   });
 
   test("tables are preserved as markdown within the chunk", () => {
-    const html = "<table><tr><th>Item</th></tr><tr><td>₹8,032 crore</td></tr></table>";
+    const html =
+      "<table><tr><th>Item</th></tr><tr><td>₹8,032 crore</td></tr></table>";
     const chunks = buildChunks([el("Revenue", 1, "Table", html)]);
     expect(chunks[0].text).toContain("| Item |");
     expect(chunks[0].text).toContain("| ₹8,032 crore |");
@@ -48,8 +62,14 @@ describe("buildChunks", () => {
   });
 
   test("elements missing page_number continue the previous page", () => {
-    const chunks = buildChunks([el("first", 2), el("no page"), el("still page 2", 2)]);
-    expect(chunks).toEqual([{ pageStart: 2, pageEnd: 2, text: "first\n\nno page\n\nstill page 2" }]);
+    const chunks = buildChunks([
+      el("first", 2),
+      el("no page"),
+      el("still page 2", 2),
+    ]);
+    expect(chunks).toEqual([
+      { pageStart: 2, pageEnd: 2, text: "first\n\nno page\n\nstill page 2" },
+    ]);
   });
 
   test("leading element without page_number is treated as page 1", () => {
@@ -68,7 +88,8 @@ describe("buildChunks", () => {
 
 describe("tableToMarkdown", () => {
   test("converts header and body rows", () => {
-    const html = "<table><tr><th>A</th><th>B</th></tr><tr><td>1</td><td>2</td></tr></table>";
+    const html =
+      "<table><tr><th>A</th><th>B</th></tr><tr><td>1</td><td>2</td></tr></table>";
     expect(tableToMarkdown(html)).toBe("| A | B |\n| --- | --- |\n| 1 | 2 |");
   });
 

@@ -25,10 +25,12 @@ function cells(row: string): string[] {
 export function tableToMarkdown(html: string): string {
   const table = html.match(/<table[\s\S]*?<\/table>/i)?.[0];
   if (!table) return html;
-  const rows = [...table.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)].map((m) => cells(m[1]));
+  const rows = [...table.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)].map((m) =>
+    cells(m[1]),
+  );
   if (rows.length === 0) return html;
   const width = Math.max(...rows.map((r) => r.length));
-  const lines = rows.map((row, i) => {
+  const lines = rows.map((row) => {
     const padded = Array.from({ length: width }, (_, j) => row[j] ?? "");
     return `| ${padded.join(" | ")} |`;
   });
@@ -64,15 +66,21 @@ export function buildChunks(elements: UnstructuredElement[]): ChunkDraft[] {
     byPage.set(page, list);
   }
 
-  const pages = [...byPage.keys()].sort((a, b) => a - b);
   const chunks: ChunkDraft[] = [];
-  for (const page of pages) {
+  for (const [page, texts] of [...byPage.entries()].sort(
+    (a, b) => a[0] - b[0],
+  )) {
     const last = chunks[chunks.length - 1];
-    if (last && Math.floor((last.pageStart - 1) / PAGES_PER_CHUNK) === Math.floor((page - 1) / PAGES_PER_CHUNK)) {
+    const pageText = texts.join("\n\n");
+    if (
+      last &&
+      Math.floor((last.pageStart - 1) / PAGES_PER_CHUNK) ===
+        Math.floor((page - 1) / PAGES_PER_CHUNK)
+    ) {
       last.pageEnd = page;
-      last.text = `${last.text}\n\n${byPage.get(page)!.join("\n\n")}`;
+      last.text = `${last.text}\n\n${pageText}`;
     } else {
-      chunks.push({ pageStart: page, pageEnd: page, text: byPage.get(page)!.join("\n\n") });
+      chunks.push({ pageStart: page, pageEnd: page, text: pageText });
     }
   }
   return chunks;
