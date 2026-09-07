@@ -4,11 +4,11 @@
 
 **Blocked by:** 01 (Foundations — schema + test seam).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Uploading a PDF stores it in Blob and creates a Document row
-- [ ] Ingest parses the PDF via Unstructured and stores page-grouped Chunks, tables preserved as markdown
-- [ ] Chunk builder has direct unit tests (page grouping, table markdown, empty/odd input)
-- [ ] Document list shows upload/parse status (with error message on failure) and page count, updating via polling
-- [ ] Seam test: stubbed parse output produces expected Chunk rows in the database
-- [ ] `lint` and `typecheck` pass; committed in relevant checkpoints with conventional commit messages (multiple commits as work progresses, not one lump commit)
+- [x] Uploading a PDF stores it in Blob and creates a Document row
+- [x] Ingest parses the PDF via Unstructured and stores page-grouped Chunks, tables preserved as markdown
+- [x] Chunk builder has direct unit tests (page grouping, table markdown, empty/odd input)
+- [x] Document list shows upload/parse status (with error message on failure) and page count, updating via polling
+- [x] Seam test: stubbed parse output produces expected Chunk rows in the database
+- [x] `lint` and `typecheck` pass; committed in relevant checkpoints with conventional commit messages (multiple commits as work progresses, not one lump commit)
