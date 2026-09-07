@@ -1,7 +1,7 @@
 import { put } from "@vercel/blob";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { documents } from "@/lib/db/schema";
+import { documents, facts } from "@/lib/db/schema";
 import { markDocument } from "@/lib/documents";
 import { inngest } from "@/lib/inngest/client";
 
@@ -12,6 +12,10 @@ export async function GET() {
       filename: documents.filename,
       status: documents.status,
       pageCount: documents.pageCount,
+      factCount:
+        sql<number>`(select count(*) from ${facts} where ${facts.documentId} = ${documents.id})`.mapWith(
+          Number,
+        ),
       error: documents.error,
       createdAt: documents.createdAt,
     })

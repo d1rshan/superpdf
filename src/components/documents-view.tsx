@@ -7,14 +7,16 @@ type DocumentRow = {
   filename: string;
   status: string;
   pageCount: number | null;
+  factCount: number;
   error: string | null;
 };
 
-const ACTIVE_STATUSES = new Set(["uploading", "parsing"]);
+const ACTIVE_STATUSES = new Set(["uploading", "parsing", "extracting"]);
 
 const BADGE_STYLES: Record<string, string> = {
   uploading: "bg-amber-100 text-amber-800",
   parsing: "bg-blue-100 text-blue-800",
+  extracting: "bg-purple-100 text-purple-800",
   done: "bg-green-100 text-green-800",
   failed: "bg-red-100 text-red-800",
 };
@@ -105,6 +107,11 @@ export function DocumentsView() {
                 {doc.pageCount != null && (
                   <span>
                     {doc.pageCount} {doc.pageCount === 1 ? "page" : "pages"}
+                  </span>
+                )}
+                {doc.factCount > 0 && (
+                  <span>
+                    {doc.factCount} {doc.factCount === 1 ? "fact" : "facts"}
                   </span>
                 )}
                 <span
