@@ -2,6 +2,7 @@ import {
   doublePrecision,
   integer,
   jsonb,
+  pgEnum,
   pgTable,
   primaryKey,
   text,
@@ -9,6 +10,12 @@ import {
   uuid,
   vector,
 } from "drizzle-orm/pg-core";
+
+export const relationshipTypeEnum = pgEnum("relationship_type", [
+  "SAME_FACT",
+  "CONTRADICTS",
+  "CONTEXTUALIZES",
+]);
 
 export const documents = pgTable("documents", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -51,6 +58,9 @@ export const facts = pgTable("facts", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export const topics = pgTable("topics", {
@@ -89,15 +99,17 @@ export const factRelationships = pgTable("fact_relationships", {
   factBId: uuid("fact_b_id")
     .notNull()
     .references(() => facts.id, { onDelete: "cascade" }),
-  type: text("type").notNull(),
+  type: relationshipTypeEnum("type").notNull(),
   explanation: text("explanation").notNull(),
   confidence: doublePrecision("confidence").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
-export type RelationshipType = "SAME_FACT" | "CONTRADICTS" | "CONTEXTUALIZES";
 export type DocumentStatus =
   | "uploading"
   | "parsing"
