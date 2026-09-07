@@ -1,3 +1,4 @@
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import { embedMany, generateObject } from "ai";
 import { z } from "zod";
@@ -97,12 +98,24 @@ export function factEmbeddingText(fact: {
     .join(" | ");
 }
 
+// ponytail: embedding provider fixed to Gemini at 1536 dims to match the vector column; env-swap the model string if it changes
+export const EMBEDDING_DIMENSIONS = 1536;
+
 export async function embedFacts(values: string[]): Promise<number[][]> {
   if (values.length === 0) return [];
-  const openai = createOpenAI({ apiKey: env("OPENAI_API_KEY") });
+  const google = createGoogleGenerativeAI({ apiKey: env("GOOGLE_API_KEY") });
   const { embeddings } = await embedMany({
-    model: openai.textEmbeddingModel("text-embedding-3-small"),
+    model: google.textEmbeddingModel(
+      envOr("EMBEDDING_MODEL", "gemini-embedding-001"),
+    ),
     values,
+    providerOptions: {
+      google: { outputDimensionality: EMBEDDING_DIMENSIONS },
+    },
   });
   return embeddings;
+}
+
+function envOr(name: string, fallback: string): string {
+  return process.env[name] ?? fallback;
 }
