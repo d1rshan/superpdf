@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
-import { afterAll, describe, expect, test } from "vitest";
+import { afterAll, describe, expect, test, vi } from "vitest";
 import { db } from "../db";
-import { chunks, documents } from "../db/schema";
+import { chunks, documents, facts } from "../db/schema";
+import type { ExtractedFact } from "../llm";
 import type { UnstructuredElement } from "./chunk-builder";
 import { ingestDocument } from "./ingest";
 
@@ -33,6 +34,23 @@ function page(number: number, text: string): UnstructuredElement {
   return { type: "NarrativeText", text, metadata: { page_number: number } };
 }
 
+function fact(overrides: Partial<ExtractedFact> = {}): ExtractedFact {
+  return {
+    entity: "Acme Corp",
+    attribute: "FY24 revenue",
+    value: "₹8,032 crore",
+    qualifiers: { time: "FY24", scope: "consolidated", location: null },
+    evidenceQuote: "revenue of ₹8,032 crore in FY24",
+    pageNumber: 1,
+    confidence: 0.9,
+    ...overrides,
+  };
+}
+
+function vectorOf(signal: number): number[] {
+  return Array.from({ length: 1536 }, (_, i) => ((i + signal) % 7) / 7);
+}
+
 describe("ingestDocument seam", () => {
   test("stubbed parse output produces expected Chunk rows and page count", async () => {
     const documentId = await createDocument();
@@ -42,8 +60,12 @@ describe("ingestDocument seam", () => {
       page(3, "Headcount fell."),
       page(4, "Debt rose."),
     ];
+    const extract = vi.fn(async () => [fact()]);
+    const embed = vi.fn(async (values: string[]) =>
+      values.map((_, i) => vectorOf(i + 1)),
+    );
 
-    await ingestDocument(documentId, { parse });
+    await ingestDocument(documentId, { parse, extract, embed });
 
     const [doc] = await db
       .select()
@@ -81,6 +103,96 @@ describe("ingestDocument seam", () => {
     expect(doc.error).toBe("unstructured unreachable");
     expect(
       await db.select().from(chunks).where(eq(chunks.documentId, documentId)),
+    ).toHaveLength(0);
+  });
+
+  test("stubbed extraction stores Facts with evidence, qualifiers, raw value, and vectors", async () => {
+    const documentId = await createDocument();
+    const parse = async () => [
+      page(1, "Revenue of ₹8,032 crore."),
+      page(2, "A director resigned."),
+    ];
+    const extract = vi.fn(async (text: string) => [
+      fact({ pageNumber: 1, evidenceQuote: "Revenue of ₹8,032 crore." }),
+      ...(text.includes("[page 2]")
+        ? [
+            fact({
+              entity: "Acme Corp",
+              attribute: "directorship",
+              value: "resigned",
+              qualifiers: { time: null, scope: null, location: null },
+              evidenceQuote: "A director resigned.",
+              pageNumber: 2,
+              confidence: 0.6,
+            }),
+          ]
+        : []),
+    ]);
+    const embed = vi.fn(async (values: string[]) =>
+      values.map((_, i) => vectorOf(i + 1)),
+    );
+
+    await ingestDocument(documentId, { parse, extract, embed });
+
+    expect(embed).toHaveBeenCalledOnce();
+    expect(embed.mock.calls[0][0]).toHaveLength(2);
+    expect(embed.mock.calls[0][0][0]).toContain("₹8,032 crore");
+
+    const stored = await db
+      .select()
+      .from(facts)
+      .where(eq(facts.documentId, documentId))
+      .then((rows) => rows.sort((a, b) => a.pageNumber - b.pageNumber));
+    expect(stored).toHaveLength(2);
+
+    expect(stored[0]).toMatchObject({
+      entity: "Acme Corp",
+      attribute: "FY24 revenue",
+      value: "₹8,032 crore",
+      qualifiers: { time: "FY24", scope: "consolidated", location: null },
+      evidenceQuote: "Revenue of ₹8,032 crore.",
+      pageNumber: 1,
+      confidence: 0.9,
+    });
+    expect(stored[1]).toMatchObject({
+      attribute: "directorship",
+      value: "resigned",
+      pageNumber: 2,
+    });
+    for (const [i, row] of stored.entries()) {
+      expect(row.embedding).toHaveLength(1536);
+      for (const [j, v] of (row.embedding ?? []).entries()) {
+        expect(v).toBeCloseTo(vectorOf(i + 1)[j], 5);
+      }
+    }
+
+    const [doc] = await db
+      .select()
+      .from(documents)
+      .where(eq(documents.id, documentId));
+    expect(doc.status).toBe("done");
+  });
+
+  test("extraction failures record an error and leave no Facts behind", async () => {
+    const documentId = await createDocument();
+    const parse = async () => [page(1, "Some text.")];
+    const extract = vi.fn(async () => {
+      throw new Error("gateway unreachable");
+    });
+    const embed = vi.fn(async (values: string[]) =>
+      values.map(() => vectorOf(1)),
+    );
+
+    await ingestDocument(documentId, { parse, extract, embed });
+
+    const [doc] = await db
+      .select()
+      .from(documents)
+      .where(eq(documents.id, documentId));
+    expect(doc.status).toBe("failed");
+    expect(doc.error).toBe("gateway unreachable");
+    expect(
+      await db.select().from(facts).where(eq(facts.documentId, documentId)),
     ).toHaveLength(0);
   });
 });

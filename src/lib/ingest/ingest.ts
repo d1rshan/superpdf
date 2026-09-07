@@ -1,18 +1,30 @@
 import { eq } from "drizzle-orm";
 import { db } from "../db";
-import { chunks, documents } from "../db/schema";
+import { chunks, documents, facts } from "../db/schema";
 import { markDocument } from "../documents";
-import { buildChunks, type UnstructuredElement } from "./chunk-builder";
+import {
+  type ExtractedFact,
+  embedFacts,
+  extractFacts,
+  factEmbeddingText,
+} from "../llm";
+import {
+  buildChunks,
+  pageTexts,
+  type UnstructuredElement,
+} from "./chunk-builder";
 import { parsePdf } from "./parse";
 
 type ParseFn = (
   bytes: Uint8Array,
   filename: string,
 ) => Promise<UnstructuredElement[]>;
+type ExtractFn = (text: string) => Promise<ExtractedFact[]>;
+type EmbedFn = (values: string[]) => Promise<number[][]>;
 
 export async function ingestDocument(
   documentId: string,
-  deps: { parse?: ParseFn } = {},
+  deps: { parse?: ParseFn; extract?: ExtractFn; embed?: EmbedFn } = {},
 ): Promise<void> {
   const [doc] = await db
     .select()
@@ -40,6 +52,49 @@ export async function ingestDocument(
     await db.delete(chunks).where(eq(chunks.documentId, documentId));
     if (drafts.length > 0) {
       await db.insert(chunks).values(drafts.map((d) => ({ documentId, ...d })));
+    }
+
+    await markDocument(documentId, "extracting");
+    const extract = deps.extract ?? extractFacts;
+    const embed = deps.embed ?? embedFacts;
+    const pages = new Map(pageTexts(elements).map((p) => [p.page, p.text]));
+
+    const extracted: ExtractedFact[] = [];
+    for (const chunk of drafts) {
+      const input = [];
+      for (let page = chunk.pageStart; page <= chunk.pageEnd; page++) {
+        const text = pages.get(page);
+        if (text) input.push(`[page ${page}]\n${text}`);
+      }
+      if (input.length === 0) continue;
+      for (const fact of await extract(input.join("\n\n"))) {
+        // ponytail: clamp instead of reject — a mis-cited page within the chunk still keeps the fact usable
+        extracted.push({
+          ...fact,
+          pageNumber: Math.min(
+            chunk.pageEnd,
+            Math.max(chunk.pageStart, fact.pageNumber),
+          ),
+        });
+      }
+    }
+
+    await db.delete(facts).where(eq(facts.documentId, documentId));
+    if (extracted.length > 0) {
+      const vectors = await embed(extracted.map(factEmbeddingText));
+      await db.insert(facts).values(
+        extracted.map((fact, i) => ({
+          documentId,
+          entity: fact.entity,
+          attribute: fact.attribute,
+          value: fact.value,
+          qualifiers: fact.qualifiers,
+          evidenceQuote: fact.evidenceQuote,
+          pageNumber: fact.pageNumber,
+          confidence: fact.confidence,
+          embedding: vectors[i],
+        })),
+      );
     }
 
     await db

@@ -47,7 +47,9 @@ function elementText(element: UnstructuredElement): string | null {
   return text;
 }
 
-export function buildChunks(elements: UnstructuredElement[]): ChunkDraft[] {
+export function pageTexts(
+  elements: UnstructuredElement[],
+): { page: number; text: string }[] {
   const parts: { page: number; text: string }[] = [];
   let currentPage = 1;
   for (const element of elements) {
@@ -65,22 +67,27 @@ export function buildChunks(elements: UnstructuredElement[]): ChunkDraft[] {
     list.push(text);
     byPage.set(page, list);
   }
+  return [...byPage.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([page, texts]) => ({
+      page,
+      text: texts.join("\n\n"),
+    }));
+}
 
+export function buildChunks(elements: UnstructuredElement[]): ChunkDraft[] {
   const chunks: ChunkDraft[] = [];
-  for (const [page, texts] of [...byPage.entries()].sort(
-    (a, b) => a[0] - b[0],
-  )) {
+  for (const { page, text } of pageTexts(elements)) {
     const last = chunks[chunks.length - 1];
-    const pageText = texts.join("\n\n");
     if (
       last &&
       Math.floor((last.pageStart - 1) / PAGES_PER_CHUNK) ===
         Math.floor((page - 1) / PAGES_PER_CHUNK)
     ) {
       last.pageEnd = page;
-      last.text = `${last.text}\n\n${pageText}`;
+      last.text = `${last.text}\n\n${text}`;
     } else {
-      chunks.push({ pageStart: page, pageEnd: page, text: pageText });
+      chunks.push({ pageStart: page, pageEnd: page, text });
     }
   }
   return chunks;
