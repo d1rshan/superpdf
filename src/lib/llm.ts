@@ -38,6 +38,7 @@ const extractedFactSchema = z.object({
 
 export type ExtractedFact = z.infer<typeof extractedFactSchema>;
 
+// ponytail: flag is derived from confidence, not stored as a column (spec schema has none) — surface in results UI (ticket 05) if needed
 export const LOW_CONFIDENCE_THRESHOLD = 0.5;
 
 export function isLowConfidence(fact: { confidence: number }): boolean {

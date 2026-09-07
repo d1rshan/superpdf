@@ -51,6 +51,9 @@ function vectorOf(signal: number): number[] {
   return Array.from({ length: 1536 }, (_, i) => ((i + signal) % 7) / 7);
 }
 
+const embedStub = async (values: string[]) =>
+  values.map((_, i) => vectorOf(i + 1));
+
 describe("ingestDocument seam", () => {
   test("stubbed parse output produces expected Chunk rows and page count", async () => {
     const documentId = await createDocument();
@@ -61,9 +64,7 @@ describe("ingestDocument seam", () => {
       page(4, "Debt rose."),
     ];
     const extract = vi.fn(async () => [fact()]);
-    const embed = vi.fn(async (values: string[]) =>
-      values.map((_, i) => vectorOf(i + 1)),
-    );
+    const embed = vi.fn(embedStub);
 
     await ingestDocument(documentId, { parse, extract, embed });
 
@@ -128,9 +129,7 @@ describe("ingestDocument seam", () => {
           ]
         : []),
     ]);
-    const embed = vi.fn(async (values: string[]) =>
-      values.map((_, i) => vectorOf(i + 1)),
-    );
+    const embed = vi.fn(embedStub);
 
     await ingestDocument(documentId, { parse, extract, embed });
 

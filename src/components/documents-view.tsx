@@ -109,7 +109,7 @@ export function DocumentsView() {
                     {doc.pageCount} {doc.pageCount === 1 ? "page" : "pages"}
                   </span>
                 )}
-                {doc.factCount > 0 && (
+                {doc.status === "done" && (
                   <span>
                     {doc.factCount} {doc.factCount === 1 ? "fact" : "facts"}
                   </span>
