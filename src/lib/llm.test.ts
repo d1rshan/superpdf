@@ -1,9 +1,11 @@
+const LIVE = process.env.LIVE_TESTS === "1";
+
 import { expect, test } from "vitest";
 import { embedFacts, extractFacts } from "./llm";
 
 test(
   "live gateway returns structured Facts (skipped without LLM_API_KEY)",
-  { skip: !process.env.LLM_API_KEY || !process.env.LLM_BASE_URL },
+  { skip: !LIVE },
   async () => {
     const facts = await extractFacts(
       `[page 1]\nThe company reported revenue of ₹8,032 crore for FY24. On March 3, a director resigned.`,
@@ -21,7 +23,7 @@ test(
 
 test(
   "live Gemini embeddings return 1536-dim vectors (skipped without GOOGLE_API_KEY)",
-  { skip: !process.env.GOOGLE_API_KEY },
+  { skip: !LIVE },
   async () => {
     const vectors = await embedFacts([
       "revenue of ₹8,032 crore",
