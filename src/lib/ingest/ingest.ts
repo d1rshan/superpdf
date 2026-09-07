@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../db";
 import { chunks, documents } from "../db/schema";
+import { markDocument } from "../documents";
 import { buildChunks, type UnstructuredElement } from "./chunk-builder";
 import { parsePdf } from "./parse";
 
@@ -20,10 +21,7 @@ export async function ingestDocument(
   if (!doc) return;
 
   try {
-    await db
-      .update(documents)
-      .set({ status: "parsing", error: null, updatedAt: new Date() })
-      .where(eq(documents.id, documentId));
+    await markDocument(documentId, "parsing");
 
     if (!doc.blobUrl) throw new Error("Document has no stored PDF");
     const response = await fetch(doc.blobUrl);
@@ -32,7 +30,12 @@ export async function ingestDocument(
     const bytes = new Uint8Array(await response.arrayBuffer());
 
     const parse = deps.parse ?? parsePdf;
-    const drafts = buildChunks(await parse(bytes, doc.filename));
+    const elements = await parse(bytes, doc.filename);
+    const drafts = buildChunks(elements);
+    const pageCount = Math.max(
+      0,
+      ...elements.map((e) => e.metadata?.page_number ?? 0),
+    );
 
     await db.delete(chunks).where(eq(chunks.documentId, documentId));
     if (drafts.length > 0) {
@@ -41,21 +44,13 @@ export async function ingestDocument(
 
     await db
       .update(documents)
-      .set({
-        status: "done",
-        pageCount: Math.max(0, ...drafts.map((d) => d.pageEnd)),
-        error: null,
-        updatedAt: new Date(),
-      })
+      .set({ status: "done", pageCount, error: null, updatedAt: new Date() })
       .where(eq(documents.id, documentId));
   } catch (err) {
-    await db
-      .update(documents)
-      .set({
-        status: "failed",
-        error: err instanceof Error ? err.message : String(err),
-        updatedAt: new Date(),
-      })
-      .where(eq(documents.id, documentId));
+    await markDocument(
+      documentId,
+      "failed",
+      err instanceof Error ? err.message : String(err),
+    );
   }
 }

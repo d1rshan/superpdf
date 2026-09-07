@@ -5,7 +5,7 @@ export const ingestFn = inngest.createFunction(
   {
     id: "ingest-document",
     name: "Ingest Document",
-    triggers: [{ event: "document/ingested" }],
+    triggers: [{ event: "document/uploaded" }],
   },
   ({ event }) => ingestDocument(event.data.documentId),
 );

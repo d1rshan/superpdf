@@ -16,9 +16,11 @@ export async function parsePdf(
       files: { content: bytes, fileName: filename },
       strategy: Strategy.Auto,
       splitPdfPage: true,
-      splitPdfAllowFailed: true,
       splitPdfConcurrencyLevel: 8,
     },
   });
-  return Array.isArray(response) ? (response as UnstructuredElement[]) : [];
+  if (!Array.isArray(response)) {
+    throw new Error("Unexpected response from Unstructured API");
+  }
+  return response as UnstructuredElement[];
 }

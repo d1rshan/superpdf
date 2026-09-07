@@ -2,6 +2,7 @@ import { put } from "@vercel/blob";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { documents } from "@/lib/db/schema";
+import { markDocument } from "@/lib/documents";
 import { inngest } from "@/lib/inngest/client";
 
 export async function GET() {
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
     .returning();
 
   try {
-    const blob = await put(`documents/${doc.id}/${file.name}`, file, {
+    const blob = await put(`documents/${doc.id}`, file, {
       access: "public",
       contentType: "application/pdf",
     });
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
       .set({ blobUrl: blob.url, status: "parsing", updatedAt: new Date() })
       .where(eq(documents.id, doc.id));
     await inngest.send({
-      name: "document/ingested",
+      name: "document/uploaded",
       data: { documentId: doc.id },
     });
     return Response.json(
@@ -49,14 +50,11 @@ export async function POST(request: Request) {
       { status: 201 },
     );
   } catch (err) {
-    await db
-      .update(documents)
-      .set({
-        status: "failed",
-        error: err instanceof Error ? err.message : String(err),
-        updatedAt: new Date(),
-      })
-      .where(eq(documents.id, doc.id));
+    await markDocument(
+      doc.id,
+      "failed",
+      err instanceof Error ? err.message : String(err),
+    );
     return Response.json({ id: doc.id, status: "failed" }, { status: 500 });
   }
 }
