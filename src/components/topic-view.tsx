@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { EvidenceDrawer } from "@/components/evidence-drawer";
 import { isLowConfidence } from "@/lib/confidence";
 
 type SelectedDocument = {
@@ -24,6 +25,7 @@ type DocumentRow = {
   filename: string;
   status: string;
   factCount: number;
+  pageCount: number | null;
 };
 
 type Relationship = {
@@ -37,6 +39,7 @@ type Relationship = {
 
 type RelatedFact = {
   id: string;
+  documentId: string;
   entity: string;
   attribute: string;
   value: unknown;
@@ -51,6 +54,8 @@ type RelatedFact = {
 };
 
 type Fact = RelatedFact & { documentId: string };
+
+type EvidenceTarget = { fact: Fact; filename: string };
 
 const STATUS_STYLES: Record<string, string> = {
   idle: "bg-zinc-100 text-zinc-600",
@@ -84,9 +89,21 @@ function qualifiersText(q: RelatedFact["qualifiers"]): string {
     .join(" · ");
 }
 
-function FactCard({ fact, label }: { fact: RelatedFact; label: string }) {
+function FactCard({
+  fact,
+  label,
+  onOpen,
+}: {
+  fact: RelatedFact;
+  label: string;
+  onOpen: () => void;
+}) {
   return (
-    <div className="flex-1 rounded-lg bg-zinc-50 p-3 text-sm">
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex-1 cursor-pointer rounded-lg bg-zinc-50 p-3 text-left text-sm hover:bg-zinc-100"
+    >
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-medium text-zinc-500">{label}</p>
         {isLowConfidence(fact) && (
@@ -104,7 +121,7 @@ function FactCard({ fact, label }: { fact: RelatedFact; label: string }) {
       <p className="mt-1 text-xs text-zinc-400">
         p.{fact.pageNumber} · {Math.round(fact.confidence * 100)}%
       </p>
-    </div>
+    </button>
   );
 }
 
@@ -116,6 +133,7 @@ export function TopicView({ topicId }: { topicId: string }) {
   const [search, setSearch] = useState("");
   const [docFilter, setDocFilter] = useState("all");
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
+  const [evidence, setEvidence] = useState<EvidenceTarget | null>(null);
   const processingRef = useRef(false);
 
   const refresh = useCallback(async () => {
@@ -297,8 +315,32 @@ export function TopicView({ topicId }: { topicId: string }) {
                         </div>
                         <p className="mb-3 text-sm">{rel.explanation}</p>
                         <div className="flex gap-3">
-                          <FactCard fact={rel.a} label="Fact A" />
-                          <FactCard fact={rel.b} label="Fact B" />
+                          <FactCard
+                            fact={rel.a}
+                            label="Fact A"
+                            onOpen={() =>
+                              setEvidence({
+                                fact: rel.a,
+                                filename:
+                                  topic.documents.find(
+                                    (d) => d.id === rel.a.documentId,
+                                  )?.filename ?? "unknown",
+                              })
+                            }
+                          />
+                          <FactCard
+                            fact={rel.b}
+                            label="Fact B"
+                            onOpen={() =>
+                              setEvidence({
+                                fact: rel.b,
+                                filename:
+                                  topic.documents.find(
+                                    (d) => d.id === rel.b.documentId,
+                                  )?.filename ?? "unknown",
+                              })
+                            }
+                          />
                         </div>
                       </li>
                     ))}
@@ -346,28 +388,38 @@ export function TopicView({ topicId }: { topicId: string }) {
         </div>
         <ul className="flex flex-col gap-2">
           {visibleFacts.map((fact) => (
-            <li
-              key={fact.id}
-              className="rounded-lg border border-zinc-200 px-3 py-2 text-sm"
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-medium">{fact.entity}</span>
-                <span>{fact.attribute}</span>
-                <span className="text-zinc-700">{String(fact.value)}</span>
-                {isLowConfidence(fact) && (
-                  <span className={LOW_CONFIDENCE_BADGE}>low confidence</span>
+            <li key={fact.id} className="rounded-lg border border-zinc-200">
+              <button
+                type="button"
+                onClick={() =>
+                  setEvidence({
+                    fact,
+                    filename:
+                      topic.documents.find((d) => d.id === fact.documentId)
+                        ?.filename ?? "unknown",
+                  })
+                }
+                className="w-full cursor-pointer rounded-lg px-3 py-2 text-left text-sm hover:bg-zinc-50"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">{fact.entity}</span>
+                  <span>{fact.attribute}</span>
+                  <span className="text-zinc-700">{String(fact.value)}</span>
+                  {isLowConfidence(fact) && (
+                    <span className={LOW_CONFIDENCE_BADGE}>low confidence</span>
+                  )}
+                  <span className="ml-auto shrink-0 text-xs text-zinc-500">
+                    {topic.documents.find((d) => d.id === fact.documentId)
+                      ?.filename ?? "unknown"}{" "}
+                    · p.{fact.pageNumber} · {Math.round(fact.confidence * 100)}%
+                  </span>
+                </div>
+                {qualifiersText(fact.qualifiers) && (
+                  <p className="text-xs text-zinc-500">
+                    {qualifiersText(fact.qualifiers)}
+                  </p>
                 )}
-                <span className="ml-auto shrink-0 text-xs text-zinc-500">
-                  {topic.documents.find((d) => d.id === fact.documentId)
-                    ?.filename ?? "unknown"}{" "}
-                  · p.{fact.pageNumber} · {Math.round(fact.confidence * 100)}%
-                </span>
-              </div>
-              {qualifiersText(fact.qualifiers) && (
-                <p className="text-xs text-zinc-500">
-                  {qualifiersText(fact.qualifiers)}
-                </p>
-              )}
+              </button>
             </li>
           ))}
           {visibleFacts.length === 0 && (
@@ -381,6 +433,18 @@ export function TopicView({ topicId }: { topicId: string }) {
           )}
         </ul>
       </section>
+
+      {evidence && (
+        <EvidenceDrawer
+          fact={evidence.fact}
+          filename={evidence.filename}
+          pageCount={
+            allDocuments.find((d) => d.id === evidence.fact.documentId)
+              ?.pageCount ?? null
+          }
+          onClose={() => setEvidence(null)}
+        />
+      )}
     </div>
   );
 }
