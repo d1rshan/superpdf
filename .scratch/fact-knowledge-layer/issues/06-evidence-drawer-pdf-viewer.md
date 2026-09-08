@@ -4,9 +4,9 @@
 
 **Blocked by:** 05 (Results UI — sections + fact browser).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Every Fact row opens a drawer with quote + page number
-- [ ] Drawer renders the cited page of the original PDF from Blob storage
-- [ ] Viewer supports jump-to-page navigation
+- [x] Every Fact row opens a drawer with quote + page number
+- [x] Drawer renders the cited page of the original PDF from Blob storage
+- [x] Viewer supports jump-to-page navigation
 - [ ] `lint` and `typecheck` pass; committed in relevant checkpoints with conventional commit messages (multiple commits as work progresses, not one lump commit)

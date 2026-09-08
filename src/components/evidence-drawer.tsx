@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 
 import { isLowConfidence } from "@/lib/confidence";
+import { qualifiersText } from "@/lib/qualifiers";
 
-export type EvidenceFact = {
+export type FactWithEvidence = {
   documentId: string;
   pageNumber: number;
   evidenceQuote: string;
@@ -16,23 +17,13 @@ export type EvidenceFact = {
   };
 };
 
-function qualifiersText(q: EvidenceFact["qualifiers"]): string {
-  return [
-    q.time && `time: ${q.time}`,
-    q.scope && `scope: ${q.scope}`,
-    q.location && `location: ${q.location}`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-}
-
 export function EvidenceDrawer({
   fact,
   filename,
   pageCount,
   onClose,
 }: {
-  fact: EvidenceFact;
+  fact: FactWithEvidence;
   filename: string;
   pageCount: number | null;
   onClose: () => void;
@@ -61,7 +52,7 @@ export function EvidenceDrawer({
       <aside
         role="dialog"
         aria-modal="true"
-        aria-label={`Evidence from ${filename}, page ${fact.pageNumber}`}
+        aria-label={`Evidence from ${filename}, page ${page}`}
         className="relative flex h-full w-full max-w-2xl flex-col gap-4 overflow-y-auto border-l border-zinc-200 bg-white p-6"
       >
         <div className="flex items-start justify-between gap-4">

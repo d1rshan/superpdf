@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { EvidenceDrawer } from "@/components/evidence-drawer";
 import { isLowConfidence } from "@/lib/confidence";
+import { qualifiersText } from "@/lib/qualifiers";
 
 type SelectedDocument = {
   id: string;
@@ -79,14 +80,10 @@ const TYPE_STYLES: Record<string, string> = {
 const LOW_CONFIDENCE_BADGE =
   "rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800";
 
-function qualifiersText(q: RelatedFact["qualifiers"]): string {
-  return [
-    q.time && `time: ${q.time}`,
-    q.scope && `scope: ${q.scope}`,
-    q.location && `location: ${q.location}`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+function filenameOf(topic: Topic, documentId: string): string {
+  return (
+    topic.documents.find((d) => d.id === documentId)?.filename ?? "unknown"
+  );
 }
 
 function FactCard({
@@ -321,10 +318,7 @@ export function TopicView({ topicId }: { topicId: string }) {
                             onOpen={() =>
                               setEvidence({
                                 fact: rel.a,
-                                filename:
-                                  topic.documents.find(
-                                    (d) => d.id === rel.a.documentId,
-                                  )?.filename ?? "unknown",
+                                filename: filenameOf(topic, rel.a.documentId),
                               })
                             }
                           />
@@ -334,10 +328,7 @@ export function TopicView({ topicId }: { topicId: string }) {
                             onOpen={() =>
                               setEvidence({
                                 fact: rel.b,
-                                filename:
-                                  topic.documents.find(
-                                    (d) => d.id === rel.b.documentId,
-                                  )?.filename ?? "unknown",
+                                filename: filenameOf(topic, rel.b.documentId),
                               })
                             }
                           />
@@ -394,9 +385,7 @@ export function TopicView({ topicId }: { topicId: string }) {
                 onClick={() =>
                   setEvidence({
                     fact,
-                    filename:
-                      topic.documents.find((d) => d.id === fact.documentId)
-                        ?.filename ?? "unknown",
+                    filename: filenameOf(topic, fact.documentId),
                   })
                 }
                 className="w-full cursor-pointer rounded-lg px-3 py-2 text-left text-sm hover:bg-zinc-50"
@@ -409,9 +398,8 @@ export function TopicView({ topicId }: { topicId: string }) {
                     <span className={LOW_CONFIDENCE_BADGE}>low confidence</span>
                   )}
                   <span className="ml-auto shrink-0 text-xs text-zinc-500">
-                    {topic.documents.find((d) => d.id === fact.documentId)
-                      ?.filename ?? "unknown"}{" "}
-                    · p.{fact.pageNumber} · {Math.round(fact.confidence * 100)}%
+                    {filenameOf(topic, fact.documentId)} · p.{fact.pageNumber} ·{" "}
+                    {Math.round(fact.confidence * 100)}%
                   </span>
                 </div>
                 {qualifiersText(fact.qualifiers) && (
