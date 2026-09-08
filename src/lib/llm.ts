@@ -117,6 +117,75 @@ export function factEmbeddingText(fact: {
     .join(" | ");
 }
 
+export type ComparisonFact = {
+  entity: string;
+  attribute: string;
+  value: unknown;
+  qualifiers: {
+    time: string | null;
+    scope: string | null;
+    location: string | null;
+  };
+  evidenceQuote: string;
+  pageNumber: number;
+};
+
+const COMPARISON_PROMPT = `You compare factual claims extracted from documents. Each pair shows two facts with their entity, attribute, value (exactly as stated, with its unit), qualifiers, and the evidence quote.
+
+Judge whether the two facts refer to the same underlying claim, accounting for units, periods, and scope yourself:
+- SAME_FACT: they state the same fact, even in different wording, units, or currencies (e.g. "₹8,032 crore" vs "₹80.3 billion").
+- CONTRADICTS: they genuinely conflict for the same period, scope, and subject.
+- CONTEXTUALIZES: they look contradictory but are reconciled by differing time period, scope, or units — the explanation must name the differing qualifier(s).
+- UNRELATED: they are not claims about the same thing and say nothing relevant about each other.
+
+explanation: one line a reader can use directly. confidence: 0 to 1.`;
+
+function renderFact(fact: ComparisonFact, label: string): string {
+  const { time, scope, location } = fact.qualifiers;
+  const qualifiers = [
+    time && `time=${time}`,
+    scope && `scope=${scope}`,
+    location && `location=${location}`,
+  ]
+    .filter(Boolean)
+    .join(", ");
+  return `${label}: entity=${fact.entity} | attribute=${fact.attribute} | value=${String(fact.value)}${qualifiers ? ` | qualifiers: ${qualifiers}` : ""} | evidence (p.${fact.pageNumber}): "${fact.evidenceQuote}"`;
+}
+
+export async function compareFactPairs(
+  pairs: { a: ComparisonFact; b: ComparisonFact }[],
+  sessionId: string,
+): Promise<{ type: string; explanation: string; confidence: number }[]> {
+  if (pairs.length === 0) return [];
+  const model = llmModel();
+  const { object } = await generateObject({
+    model: gateway()(model),
+    schema: z.object({
+      verdicts: z.array(
+        z.object({
+          type: z.enum([
+            "SAME_FACT",
+            "CONTRADICTS",
+            "CONTEXTUALIZES",
+            "UNRELATED",
+          ]),
+          explanation: z.string().describe("One-line reason for the verdict"),
+          confidence: z.number().min(0).max(1),
+        }),
+      ),
+    }),
+    prompt: `${COMPARISON_PROMPT}\n\nPairs:\n\n${pairs
+      .map(
+        ({ a, b }, i) =>
+          `Pair ${i + 1}\n${renderFact(a, "Fact A")}\n${renderFact(b, "Fact B")}`,
+      )
+      .join("\n\n")}`,
+    headers: { "x-opencode-session": sessionId },
+  });
+  console.log(`[compare ${model}] ${object.verdicts.length} verdicts`);
+  return object.verdicts;
+}
+
 // ponytail: embedding provider fixed to OpenAI text-embedding-3-small (1536-dim default, matches the pgvector column); env-swap the model string if it changes
 export async function embedFacts(values: string[]): Promise<number[][]> {
   if (values.length === 0) return [];

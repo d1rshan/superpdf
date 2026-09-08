@@ -50,7 +50,13 @@ export const facts = pgTable("facts", {
   entity: text("entity").notNull(),
   attribute: text("attribute").notNull(),
   value: jsonb("value").notNull(),
-  qualifiers: jsonb("qualifiers").notNull(),
+  qualifiers: jsonb("qualifiers")
+    .$type<{
+      time: string | null;
+      scope: string | null;
+      location: string | null;
+    }>()
+    .notNull(),
   evidenceQuote: text("evidence_quote").notNull(),
   pageNumber: integer("page_number").notNull(),
   confidence: doublePrecision("confidence").notNull(),
