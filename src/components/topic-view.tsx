@@ -90,7 +90,9 @@ function FactCard({
         <p className="font-mono text-xs uppercase tracking-widest text-faint">
           {label}
         </p>
-        {isLowConfidence(fact) && <span className={warnBadge}>low conf</span>}
+        {isLowConfidence(fact) && (
+          <span className={warnBadge}>low confidence</span>
+        )}
       </div>
       <p className="font-medium">{fact.entity}</p>
       <p>{fact.attribute}</p>
@@ -271,7 +273,7 @@ export function TopicView({ topicId }: { topicId: string }) {
                         <div className="mb-2 flex items-center gap-2">
                           {/* ponytail: same 0.5 threshold as Facts — bump per-type if reconciliation confidences cluster near it */}
                           {isLowConfidence(rel) && (
-                            <span className={warnBadge}>low conf</span>
+                            <span className={warnBadge}>low confidence</span>
                           )}
                           <span className="font-mono text-xs text-muted">
                             confidence {Math.round(rel.confidence * 100)}%
@@ -364,7 +366,7 @@ export function TopicView({ topicId }: { topicId: string }) {
                   <span>{fact.attribute}</span>
                   <span className="text-muted">{String(fact.value)}</span>
                   {isLowConfidence(fact) && (
-                    <span className={warnBadge}>low conf</span>
+                    <span className={warnBadge}>low confidence</span>
                   )}
                   <span className="ml-auto shrink-0 font-mono text-xs text-faint">
                     {filenameOf(topic, fact.documentId)} · p.{fact.pageNumber} ·{" "}

@@ -8,6 +8,9 @@ const TONES = {
   error: "bg-badge-error-bg text-badge-error-text",
 } as const;
 
+const pick = (map: Record<string, string>, key: string) =>
+  `${BASE} ${map[key] ?? TONES.neutral}`;
+
 const STATUS_TONES: Record<string, string> = {
   idle: TONES.neutral,
   uploading: TONES.info,
@@ -24,10 +27,11 @@ const RELATIONSHIP_TONES: Record<string, string> = {
   CONTEXTUALIZES: TONES.info,
 };
 
-export const statusBadge = (status: string) =>
-  `${BASE} ${STATUS_TONES[status] ?? TONES.neutral}`;
+export const statusBadge = (status: string) => pick(STATUS_TONES, status);
 
 export const relationshipBadge = (type: string) =>
-  `${BASE} ${RELATIONSHIP_TONES[type] ?? TONES.neutral}`;
+  pick(RELATIONSHIP_TONES, type);
 
 export const warnBadge = `${BASE} ${TONES.warn}`;
+
+export const neutralBadge = `${BASE} ${TONES.neutral}`;

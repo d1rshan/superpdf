@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import { isLowConfidence } from "@/lib/confidence";
 import { qualifiersText } from "@/lib/qualifiers";
-import { warnBadge } from "@/lib/status-badges";
+import { neutralBadge, warnBadge } from "@/lib/status-badges";
 
 export type FactWithEvidence = {
   documentId: string;
@@ -65,7 +65,7 @@ export function EvidenceDrawer({
           </div>
           <div className="flex items-center gap-2">
             {isLowConfidence(fact) && (
-              <span className={warnBadge}>low conf</span>
+              <span className={warnBadge}>low confidence</span>
             )}
             <button
               type="button"
@@ -78,7 +78,7 @@ export function EvidenceDrawer({
         </div>
 
         <div className="flex items-center gap-2 text-sm">
-          <span className={warnBadge}>p.{fact.pageNumber}</span>
+          <span className={neutralBadge}>p.{fact.pageNumber}</span>
           <span className="font-mono text-xs text-muted">
             {Math.round(fact.confidence * 100)}% confidence
           </span>
