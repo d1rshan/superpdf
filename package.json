@@ -15,7 +15,6 @@
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
-    "@ai-sdk/google": "^4.0.64",
     "@ai-sdk/openai": "^4.0.60",
     "@firecrawl/pdf-inspector": "^1.18.0",
     "@vercel/blob": "^2.8.0",

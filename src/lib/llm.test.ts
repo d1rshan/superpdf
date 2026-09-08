@@ -22,7 +22,7 @@ test(
 );
 
 test(
-  "live Gemini embeddings return 1536-dim vectors (skipped without GOOGLE_API_KEY)",
+  "live OpenAI embeddings return 1536-dim vectors (skipped without OPENAI_API_KEY)",
   { skip: !LIVE },
   async () => {
     const vectors = await embedFacts([

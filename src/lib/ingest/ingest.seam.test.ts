@@ -4,6 +4,7 @@ import { db } from "../db";
 import { chunks, documents, facts } from "../db/schema";
 import type { ExtractedFact } from "../llm";
 import type { ParsedPage } from "./chunk-builder";
+import { PAGES_PER_CHUNK } from "./chunk-builder";
 import { ingestDocument } from "./ingest";
 
 const createdIds: string[] = [];
@@ -57,12 +58,17 @@ const embedStub = async (values: string[]) =>
 describe("ingestDocument seam", () => {
   test("stubbed parse output produces expected Chunk rows and page count", async () => {
     const documentId = await createDocument();
-    const parse = async () => [
-      mkPage(1, "Revenue grew in FY24."),
-      mkPage(2, "Margins improved."),
-      mkPage(3, "Headcount fell."),
-      mkPage(4, "Debt rose."),
-    ];
+    const parse = async () =>
+      Array.from({ length: PAGES_PER_CHUNK + 1 }, (_, i) =>
+        mkPage(
+          i + 1,
+          i === 0
+            ? "Revenue grew in FY24."
+            : i === 2
+              ? "Headcount fell."
+              : `filler page ${i + 1}.`,
+        ),
+      );
     const extract = vi.fn(async () => [fact()]);
     const embed = vi.fn(embedStub);
 
@@ -73,7 +79,7 @@ describe("ingestDocument seam", () => {
       .from(documents)
       .where(eq(documents.id, documentId));
     expect(doc.status).toBe("done");
-    expect(doc.pageCount).toBe(4);
+    expect(doc.pageCount).toBe(PAGES_PER_CHUNK + 1);
     expect(doc.error).toBeNull();
     expect(extract).toHaveBeenCalledTimes(2);
 
@@ -83,10 +89,16 @@ describe("ingestDocument seam", () => {
       .where(eq(chunks.documentId, documentId));
     expect(stored).toHaveLength(2);
     const sorted = stored.sort((a, b) => a.pageStart - b.pageStart);
-    expect(sorted[0]).toMatchObject({ pageStart: 1, pageEnd: 3 });
+    expect(sorted[0]).toMatchObject({
+      pageStart: 1,
+      pageEnd: PAGES_PER_CHUNK,
+    });
     expect(sorted[0].text).toContain("Revenue grew in FY24.");
     expect(sorted[0].text).toContain("Headcount fell.");
-    expect(sorted[1]).toMatchObject({ pageStart: 4, pageEnd: 4 });
+    expect(sorted[1]).toMatchObject({
+      pageStart: PAGES_PER_CHUNK + 1,
+      pageEnd: PAGES_PER_CHUNK + 1,
+    });
   });
 
   test("failed parse records an error message and marks the document failed", async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { buildChunks, type ParsedPage } from "./chunk-builder";
+import { buildChunks, PAGES_PER_CHUNK, type ParsedPage } from "./chunk-builder";
 
 function mkPage(n: number, text: string): ParsedPage {
   return { page: n, text };
@@ -21,14 +21,20 @@ describe("buildChunks", () => {
   });
 
   test("pages are grouped in batches of PAGES_PER_CHUNK", () => {
-    const pages = [1, 2, 3, 4, 5].map((p) => mkPage(p, `page ${p}`));
+    const count = PAGES_PER_CHUNK + 2;
+    const pages = Array.from({ length: count }, (_, i) =>
+      mkPage(i + 1, `page ${i + 1}`),
+    );
     const chunks = buildChunks(pages);
     expect(chunks).toHaveLength(2);
-    expect(chunks[0]).toMatchObject({ pageStart: 1, pageEnd: 3 });
+    expect(chunks[0]).toMatchObject({ pageStart: 1, pageEnd: PAGES_PER_CHUNK });
     expect(chunks[0].text).toContain("page 1");
-    expect(chunks[0].text).toContain("page 3");
-    expect(chunks[0].text).not.toContain("page 4");
-    expect(chunks[1]).toMatchObject({ pageStart: 4, pageEnd: 5 });
+    expect(chunks[0].text).toContain(`page ${PAGES_PER_CHUNK}`);
+    expect(chunks[0].text).not.toContain(`page ${PAGES_PER_CHUNK + 1}`);
+    expect(chunks[1]).toMatchObject({
+      pageStart: PAGES_PER_CHUNK + 1,
+      pageEnd: count,
+    });
   });
 
   test("a blank page inside a group does not split the chunk", () => {
@@ -43,10 +49,13 @@ describe("buildChunks", () => {
   });
 
   test("unsorted pages still produce ordered chunks", () => {
-    const chunks = buildChunks([mkPage(4, "later"), mkPage(1, "earlier")]);
+    const chunks = buildChunks([
+      mkPage(PAGES_PER_CHUNK + 1, "later"),
+      mkPage(1, "earlier"),
+    ]);
     expect(chunks.map((c) => [c.pageStart, c.pageEnd])).toEqual([
       [1, 1],
-      [4, 4],
+      [PAGES_PER_CHUNK + 1, PAGES_PER_CHUNK + 1],
     ]);
   });
 });
