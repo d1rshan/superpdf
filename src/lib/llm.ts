@@ -183,6 +183,11 @@ export async function compareFactPairs(
     headers: { "x-opencode-session": sessionId },
   });
   console.log(`[compare ${model}] ${object.verdicts.length} verdicts`);
+  if (object.verdicts.length !== pairs.length) {
+    throw new Error(
+      `Model returned ${object.verdicts.length} verdicts for ${pairs.length} pairs`,
+    );
+  }
   return object.verdicts;
 }
 

@@ -53,6 +53,12 @@ const STATUS_STYLES: Record<string, string> = {
   failed: "bg-red-100 text-red-800",
 };
 
+const TYPE_LABELS: Record<string, string> = {
+  SAME_FACT: "Corroborated",
+  CONTRADICTS: "Contradicted",
+  CONTEXTUALIZES: "Contextualized",
+};
+
 const TYPE_STYLES: Record<string, string> = {
   SAME_FACT: "bg-green-100 text-green-800",
   CONTRADICTS: "bg-red-100 text-red-800",
@@ -117,8 +123,11 @@ export function TopicView({ topicId }: { topicId: string }) {
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
     const loop = async () => {
-      await refresh();
-      timer = setTimeout(loop, processingRef.current ? 2000 : 10000);
+      try {
+        await refresh();
+      } finally {
+        timer = setTimeout(loop, processingRef.current ? 2000 : 10000);
+      }
     };
     loop();
     return () => clearTimeout(timer);
@@ -227,7 +236,7 @@ export function TopicView({ topicId }: { topicId: string }) {
                     TYPE_STYLES[rel.type] ?? "bg-zinc-100 text-zinc-600"
                   }`}
                 >
-                  {rel.type}
+                  {TYPE_LABELS[rel.type] ?? rel.type}
                 </span>
                 <span className="text-xs text-zinc-500">
                   confidence {Math.round(rel.confidence * 100)}%

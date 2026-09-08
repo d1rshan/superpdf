@@ -4,14 +4,21 @@
 
 **Blocked by:** 03 (Facts — extraction + embedding).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Topic CRUD with Document selection persisted via topic_documents
-- [ ] Generate triggers the Resolve pipeline; topic status polls to done/failed
-- [ ] Candidate retrieval respects similarity threshold and Topic document scope
-- [ ] Batching logic unit-tested (self-pair exclusion, threshold, batch assembly)
-- [ ] Relationships stored with type, explanation, confidence
-- [ ] Regenerate wipes prior Relationships and recomputes
-- [ ] Minimal Topic page renders generation status and Relationship list
-- [ ] Seam test: stubbed LLM verdicts produce correctly-typed Relationship rows; regenerate removes old rows first
-- [ ] `lint` and `typecheck` pass; committed in relevant checkpoints with conventional commit messages (multiple commits as work progresses, not one lump commit)
+- [x] Topic CRUD with Document selection persisted via topic_documents
+- [x] Generate triggers the Resolve pipeline; topic status polls to done/failed
+- [x] Candidate retrieval respects similarity threshold and Topic document scope
+- [x] Batching logic unit-tested (self-pair exclusion, threshold, batch assembly)
+- [x] Relationships stored with type, explanation, confidence
+- [x] Regenerate wipes prior Relationships and recomputes
+- [x] Minimal Topic page renders generation status and Relationship list
+- [x] Seam test: stubbed LLM verdicts produce correctly-typed Relationship rows; regenerate removes old rows first
+- [x] `lint` and `typecheck` pass; committed in relevant checkpoints with conventional commit messages (multiple commits as work progresses, not one lump commit)
+
+## Comments
+
+- Implemented as `src/lib/resolve/` (`batching.ts` pure pair/batch logic, `resolve.ts` pipeline with `retrieve`/`compare` DI seams). `MAX_COSINE_DISTANCE = 0.3`, `TOP_K = 5`, `BATCH_SIZE = 10` as code constants.
+- `compareFactPairs` added to `src/lib/llm.ts`: batched structured-output comparison; `UNRELATED` verdict is an LLM-only escape hatch filtered before insert so the `fact_relationships.type` enum stays clean.
+- Seam test exercises real pgvector retrieval (topic-scope restriction, near-pair found) plus stubbed verdicts; regenerate test asserts old rows are gone first. Facts/qualifiers jsonb column now `$type`d.
+- API: `/api/topics` (GET/POST), `/api/topics/[id]` (GET/PATCH/DELETE), `/api/topics/[id]/generate` (POST → Inngest `topic/generate`), `/api/topics/[id]/results` (relationships + flat fact list). UI: `/topics` list, `/topics/[id]` with document selection, polled status (2s running / 10s idle), raw relationship list. Grouped sections/fact browser left for ticket 05.

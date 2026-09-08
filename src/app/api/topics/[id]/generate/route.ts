@@ -17,9 +17,20 @@ export async function POST(
     .update(topics)
     .set({ status: "running", updatedAt: new Date() })
     .where(eq(topics.id, id));
-  await inngest.send({
-    name: "topic/generate",
-    data: { topicId: id },
-  });
+  try {
+    await inngest.send({
+      name: "topic/generate",
+      data: { topicId: id },
+    });
+  } catch (err) {
+    await db
+      .update(topics)
+      .set({ status: "failed", updatedAt: new Date() })
+      .where(eq(topics.id, id));
+    return Response.json(
+      { error: err instanceof Error ? err.message : String(err) },
+      { status: 500 },
+    );
+  }
   return Response.json({ status: "running" }, { status: 202 });
 }
