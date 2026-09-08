@@ -277,7 +277,7 @@ export function TopicView({ topicId }: { topicId: string }) {
                   </span>
                   <span className="text-zinc-500">{items.length}</span>
                 </summary>
-                {items.length > 0 && (
+                {items.length > 0 ? (
                   <ul className="mt-3 flex flex-col gap-3">
                     {items.map((rel) => (
                       <li
@@ -285,6 +285,7 @@ export function TopicView({ topicId }: { topicId: string }) {
                         className="rounded-xl border border-zinc-200 p-4"
                       >
                         <div className="mb-2 flex items-center gap-2">
+                          {/* ponytail: same 0.5 threshold as Facts — bump per-type if reconciliation confidences cluster near it */}
                           {isLowConfidence(rel) && (
                             <span className={LOW_CONFIDENCE_BADGE}>
                               low confidence
@@ -302,6 +303,8 @@ export function TopicView({ topicId }: { topicId: string }) {
                       </li>
                     ))}
                   </ul>
+                ) : (
+                  <p className="mt-3 text-sm text-zinc-500">None.</p>
                 )}
               </details>
             );
@@ -321,12 +324,14 @@ export function TopicView({ topicId }: { topicId: string }) {
         <div className="mb-3 flex flex-wrap gap-2">
           <input
             type="search"
+            aria-label="Search facts"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search facts…"
             className="w-64 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm"
           />
           <select
+            aria-label="Filter by document"
             value={docFilter}
             onChange={(e) => setDocFilter(e.target.value)}
             className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm"
