@@ -69,13 +69,20 @@ export async function ingestDocument(
     const EXTRACTION_CONCURRENCY = 5;
     const perChunk: ExtractedFact[][] = new Array(inputs.length);
     let next = 0;
+    let completed = 0;
+    const ingestStart = Date.now();
     await Promise.all(
       Array.from(
         { length: Math.min(EXTRACTION_CONCURRENCY, inputs.length) },
         async () => {
           while (next < inputs.length) {
             const i = next++;
+            const chunkStart = Date.now();
             const facts = await extract(inputs[i].text, documentId);
+            completed++;
+            console.log(
+              `[ingest ${documentId}] chunk ${completed}/${inputs.length} (pages ${inputs[i].pageStart}-${inputs[i].pageEnd}): ${facts.length} facts in ${((Date.now() - chunkStart) / 1000).toFixed(1)}s`,
+            );
             // ponytail: clamp instead of reject — a mis-cited page within the chunk still keeps the fact usable
             perChunk[i] = facts.map((fact) => ({
               ...fact,
@@ -112,7 +119,14 @@ export async function ingestDocument(
       .update(documents)
       .set({ status: "done", pageCount, error: null, updatedAt: new Date() })
       .where(eq(documents.id, documentId));
+    console.log(
+      `[ingest ${documentId}] done: ${extracted.length} facts, ${pageCount} pages in ${((Date.now() - ingestStart) / 1000).toFixed(1)}s`,
+    );
   } catch (err) {
+    console.error(
+      `[ingest ${documentId}] failed:`,
+      err instanceof Error ? err.message : err,
+    );
     await markDocument(
       documentId,
       "failed",

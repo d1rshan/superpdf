@@ -73,12 +73,17 @@ export async function extractFacts(
   text: string,
   sessionId: string,
 ): Promise<ExtractedFact[]> {
+  const model = llmModel();
   const { object } = await generateObject({
-    model: gateway()(llmModel()),
+    model: gateway()(model),
     schema: z.object({ facts: z.array(extractedFactSchema) }),
     prompt: `${EXTRACTION_PROMPT}\n\nDocument text:\n\n${text}`,
     headers: { "x-opencode-session": sessionId },
   });
+  const sample = object.facts[0];
+  console.log(
+    `[extract ${model}] ${object.facts.length} facts from ${text.length} chars${sample ? ` — first: ${JSON.stringify(sample).slice(0, 300)}` : ""}`,
+  );
   return object.facts;
 }
 
@@ -109,12 +114,16 @@ export function factEmbeddingText(fact: {
 export async function embedFacts(values: string[]): Promise<number[][]> {
   if (values.length === 0) return [];
   const openai = createOpenAI({ apiKey: env("OPENAI_API_KEY") });
+  const start = Date.now();
   const { embeddings } = await embedMany({
     model: openai.textEmbeddingModel(
       envOr("EMBEDDING_MODEL", "text-embedding-3-small"),
     ),
     values,
   });
+  console.log(
+    `[embed] ${embeddings.length} facts in ${((Date.now() - start) / 1000).toFixed(1)}s`,
+  );
   return embeddings;
 }
 
