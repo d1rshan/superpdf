@@ -5,5 +5,5 @@ export function env(name: string): string {
 }
 
 export function llmModel(): string {
-  return process.env.LLM_MODEL ?? "muse-spark-1.3-contributor-free";
+  return process.env.LLM_MODEL ?? "mimo-v2.5";
 }

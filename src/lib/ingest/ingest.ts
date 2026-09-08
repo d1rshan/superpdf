@@ -49,25 +49,46 @@ export async function ingestDocument(
     const embed = deps.embed ?? embedFacts;
     const pages = new Map(parsedPages.map((p) => [p.page, p.text] as const));
 
-    const extracted: ExtractedFact[] = [];
+    const inputs: { pageStart: number; pageEnd: number; text: string }[] = [];
     for (const chunk of drafts) {
       const input = [];
       for (let page = chunk.pageStart; page <= chunk.pageEnd; page++) {
         const text = pages.get(page);
         if (text) input.push(`[page ${page}]\n${text}`);
       }
-      if (input.length === 0) continue;
-      for (const fact of await extract(input.join("\n\n"), documentId)) {
-        // ponytail: clamp instead of reject — a mis-cited page within the chunk still keeps the fact usable
-        extracted.push({
-          ...fact,
-          pageNumber: Math.min(
-            chunk.pageEnd,
-            Math.max(chunk.pageStart, fact.pageNumber),
-          ),
+      if (input.length > 0) {
+        inputs.push({
+          pageStart: chunk.pageStart,
+          pageEnd: chunk.pageEnd,
+          text: input.join("\n\n"),
         });
       }
     }
+
+    // ponytail: bounded pool, cap 5 — raise if the gateway tolerates more
+    const EXTRACTION_CONCURRENCY = 5;
+    const perChunk: ExtractedFact[][] = new Array(inputs.length);
+    let next = 0;
+    await Promise.all(
+      Array.from(
+        { length: Math.min(EXTRACTION_CONCURRENCY, inputs.length) },
+        async () => {
+          while (next < inputs.length) {
+            const i = next++;
+            const facts = await extract(inputs[i].text, documentId);
+            // ponytail: clamp instead of reject — a mis-cited page within the chunk still keeps the fact usable
+            perChunk[i] = facts.map((fact) => ({
+              ...fact,
+              pageNumber: Math.min(
+                inputs[i].pageEnd,
+                Math.max(inputs[i].pageStart, fact.pageNumber),
+              ),
+            }));
+          }
+        },
+      ),
+    );
+    const extracted = perChunk.flat();
 
     await db.delete(facts).where(eq(facts.documentId, documentId));
     if (extracted.length > 0) {

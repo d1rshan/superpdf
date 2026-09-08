@@ -75,6 +75,7 @@ describe("ingestDocument seam", () => {
     expect(doc.status).toBe("done");
     expect(doc.pageCount).toBe(4);
     expect(doc.error).toBeNull();
+    expect(extract).toHaveBeenCalledTimes(2);
 
     const stored = await db
       .select()

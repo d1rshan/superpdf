@@ -46,13 +46,15 @@ export function isLowConfidence(fact: { confidence: number }): boolean {
   return fact.confidence < LOW_CONFIDENCE_THRESHOLD;
 }
 
-// ponytail: muse models are served on the /responses endpoint only (see opencode.ai/zen docs); swap to .chat() when using chat-completions models
+// ponytail: chat (mimo etc.) hits /chat/completions, responses (muse) hits /responses — pick via LLM_API_STYLE
 function gateway() {
   const openai = createOpenAI({
     baseURL: env("LLM_BASE_URL"),
     apiKey: env("LLM_API_KEY"),
   });
-  return (model: string) => openai.responses(model);
+  return process.env.LLM_API_STYLE === "responses"
+    ? (model: string) => openai.responses(model)
+    : (model: string) => openai.chat(model);
 }
 
 const EXTRACTION_PROMPT = `You extract factual claims from a slice of a document. The text is prefixed with page markers like "[page 3]".
