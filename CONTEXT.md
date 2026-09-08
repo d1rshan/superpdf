@@ -29,7 +29,7 @@ _Avoid_: citation, source snippet
 ### Knowledge
 
 **Topic**:
-A user-created named selection of Documents that defines the scope of a knowledge run. The knowledge layer is global per Topic, never across Topics.
+A user-created named selection of Documents that defines the scope of a knowledge run. The knowledge layer is global per Topic, never across Topics. The UI shows Topics as "Workspaces"; code, API, and DB keep the domain name Topic.
 _Avoid_: session, project, dataset
 
 **Relationship**:

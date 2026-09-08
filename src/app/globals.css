@@ -86,6 +86,33 @@ body {
   color: var(--accent-ink);
 }
 
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+h1,
+h2 {
+  text-wrap: balance;
+}
+
+/* Skeleton loading blocks: shape-matched placeholders */
+.skeleton {
+  border-radius: 6px;
+  background: var(--surface-raised);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
 /* Editorial serif headings: tight tracking, tight leading */
 .font-editorial {
   font-family: var(--font-instrument-serif), serif;

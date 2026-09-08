@@ -12,13 +12,31 @@ type TopicRow = {
   createdAt: string;
 };
 
+function ListSkeleton() {
+  return (
+    <div className="flex flex-col gap-3" aria-hidden>
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="skeleton h-14" />
+      ))}
+    </div>
+  );
+}
+
 export function TopicsView() {
   const [topics, setTopics] = useState<TopicRow[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [name, setName] = useState("");
 
   const refresh = useCallback(async () => {
-    const res = await fetch("/api/topics");
-    if (res.ok) setTopics(await res.json());
+    // ponytail: loaded flips regardless of res.ok — a dead API shows empty state, not an endless skeleton
+    try {
+      const res = await fetch("/api/topics");
+      if (res.ok) {
+        setTopics(await res.json());
+      }
+    } finally {
+      setLoaded(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -52,38 +70,44 @@ export function TopicsView() {
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="New topic name"
-          className="flex-1 rounded-md border border-line bg-transparent px-3 py-2 text-sm outline-none focus:border-accent"
+          placeholder="New workspace name"
+          className="flex-1 rounded-md border border-line bg-transparent px-3 py-2 text-sm outline-none transition-colors focus:border-accent"
         />
         <button
           type="submit"
-          className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-transform hover:opacity-90 active:scale-[0.98]"
+          className="cursor-pointer rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-all hover:opacity-90 active:scale-[0.98]"
         >
           Create
         </button>
       </form>
 
-      <ul className="flex flex-col gap-3">
-        {topics.map((topic) => (
-          <li
-            key={topic.id}
-            className="rounded-lg border border-line bg-surface p-4"
-          >
-            <Link
-              href={`/topics/${topic.id}`}
-              className="flex items-center justify-between gap-4"
+      {!loaded ? (
+        <ListSkeleton />
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {topics.map((topic) => (
+            <li
+              key={topic.id}
+              className="rounded-lg border border-line bg-surface p-4 transition-colors hover:border-faint"
             >
-              <span className="truncate font-medium">{topic.name}</span>
-              <span className={`shrink-0 ${statusBadge(topic.status)}`}>
-                {topic.status}
-              </span>
-            </Link>
-          </li>
-        ))}
-        {topics.length === 0 && (
-          <p className="text-sm text-muted">No topics yet.</p>
-        )}
-      </ul>
+              <Link
+                href={`/topics/${topic.id}`}
+                className="flex items-center justify-between gap-4"
+              >
+                <span className="truncate font-medium">{topic.name}</span>
+                <span className={`shrink-0 ${statusBadge(topic.status)}`}>
+                  {topic.status}
+                </span>
+              </Link>
+            </li>
+          ))}
+          {topics.length === 0 && (
+            <p className="text-sm text-muted">
+              No workspaces yet — name one above to start comparing documents.
+            </p>
+          )}
+        </ul>
+      )}
     </div>
   );
 }

@@ -154,20 +154,23 @@ export async function compareFactPairs(
   const { object } = await generateObject({
     model: gateway()(model),
     schema: z.object({
-      verdicts: z.array(
-        z.object({
-          type: z.enum([
-            "SAME_FACT",
-            "CONTRADICTS",
-            "CONTEXTUALIZES",
-            "UNRELATED",
-          ]),
-          explanation: z.string().describe("One-line reason for the verdict"),
-          confidence: z.number().min(0).max(1),
-        }),
-      ),
+      // ponytail: .length() becomes minItems/maxItems in the JSON schema — count contract is enforced, not just prompted
+      verdicts: z
+        .array(
+          z.object({
+            type: z.enum([
+              "SAME_FACT",
+              "CONTRADICTS",
+              "CONTEXTUALIZES",
+              "UNRELATED",
+            ]),
+            explanation: z.string().describe("One-line reason for the verdict"),
+            confidence: z.number().min(0).max(1),
+          }),
+        )
+        .length(pairs.length),
     }),
-    prompt: `${COMPARISON_PROMPT}\n\nPairs:\n\n${pairs
+    prompt: `${COMPARISON_PROMPT}\n\nReturn exactly ${pairs.length} verdicts, one per pair, in the order the pairs are listed.\n\nPairs:\n\n${pairs
       .map(
         ({ a, b }, i) =>
           `Pair ${i + 1}\n${renderFact(a, "Fact A")}\n${renderFact(b, "Fact B")}`,

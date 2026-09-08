@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import Link from "next/link";
+import { NavLinks } from "@/components/nav-links";
 import { ThemeToggle } from "@/components/theme-toggle";
 import "./globals.css";
 
@@ -40,19 +41,31 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static string, no user input */}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="min-h-full flex flex-col">
-        <nav className="flex justify-between items-center border-b border-line px-6 py-3 text-sm">
-          <div className="flex gap-6">
-            <Link href="/" className="hover:text-accent">
-              Documents
-            </Link>
-            <Link href="/topics" className="hover:text-accent">
-              Topics
-            </Link>
+      <body className="min-h-dvh flex flex-col">
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-accent focus:px-3 focus:py-1.5 focus:text-sm focus:text-accent-ink"
+        >
+          Skip to content
+        </a>
+        <header className="sticky top-0 z-40 border-b border-line bg-canvas/85 backdrop-blur">
+          <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
+            <div className="flex items-center gap-6">
+              <Link
+                href="/"
+                className="flex items-center gap-2 font-editorial text-xl"
+              >
+                <span aria-hidden className="size-2 bg-accent" />
+                superpdf
+              </Link>
+              <NavLinks />
+            </div>
+            <ThemeToggle />
           </div>
-          <ThemeToggle />
-        </nav>
-        {children}
+        </header>
+        <main id="main" className="flex flex-1 flex-col">
+          {children}
+        </main>
       </body>
     </html>
   );

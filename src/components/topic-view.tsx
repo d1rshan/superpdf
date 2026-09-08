@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { EvidenceDrawer } from "@/components/evidence-drawer";
+import { EvidencePanel } from "@/components/evidence-panel";
 import { isLowConfidence } from "@/lib/confidence";
 import { qualifiersText } from "@/lib/qualifiers";
 import { relationshipBadge, statusBadge, warnBadge } from "@/lib/status-badges";
@@ -107,8 +106,31 @@ function FactCard({
   );
 }
 
+function TopicSkeleton() {
+  return (
+    <div className="flex flex-col gap-10" aria-hidden>
+      <div className="flex items-center justify-between">
+        <div className="skeleton h-8 w-64" />
+        <div className="skeleton h-9 w-28" />
+      </div>
+      <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="flex flex-col gap-4">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="skeleton h-44" />
+          ))}
+        </div>
+        <div className="flex flex-col gap-3">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="skeleton h-10" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function TopicView({ topicId }: { topicId: string }) {
-  const [topic, setTopic] = useState<(Topic & { status: string }) | null>(null);
+  const [topic, setTopic] = useState<Topic | null>(null);
   const [allDocuments, setAllDocuments] = useState<DocumentRow[]>([]);
   const [relationships, setRelationships] = useState<Relationship[]>([]);
   const [facts, setFacts] = useState<Fact[]>([]);
@@ -181,7 +203,7 @@ export function TopicView({ topicId }: { topicId: string }) {
   }, [topicId, refresh]);
 
   if (!topic) {
-    return <p className="text-sm text-muted">Loading…</p>;
+    return <TopicSkeleton />;
   }
 
   const running = topic.status === "running";
@@ -199,211 +221,226 @@ export function TopicView({ topicId }: { topicId: string }) {
   });
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-baseline gap-3">
-          <Link href="/topics" className="text-sm text-muted hover:text-text">
-            Topics
-          </Link>
+    <div className="flex flex-col gap-10">
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
           <h1 className="font-editorial text-3xl">{topic.name}</h1>
+          <span className={statusBadge(topic.status)}>{topic.status}</span>
         </div>
-        <span className={statusBadge(topic.status)}>{topic.status}</span>
-      </div>
+        <button
+          type="button"
+          onClick={generate}
+          disabled={running}
+          className="cursor-pointer rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-default disabled:opacity-50"
+        >
+          {running
+            ? "Generating…"
+            : topic.status === "done"
+              ? "Regenerate"
+              : "Generate"}
+        </button>
+      </header>
 
-      <button
-        type="button"
-        onClick={generate}
-        disabled={running}
-        className="self-start rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-transform hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
-      >
-        {topic.status === "done" ? "Regenerate" : "Generate"}
-      </button>
+      <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="flex min-w-0 flex-col gap-10">
+          <section>
+            <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-faint">
+              Relationships
+            </h2>
+            <div className="flex flex-col divide-y divide-line">
+              {Object.entries(TYPE_LABELS).map(([type, label]) => {
+                const items = relationships.filter((r) => r.type === type);
+                return (
+                  <details key={type} open={items.length > 0}>
+                    <summary className="flex cursor-pointer items-center gap-2 py-3 text-sm font-medium">
+                      <span className={relationshipBadge(type)}>{label}</span>
+                      <span className="text-muted">{items.length}</span>
+                    </summary>
+                    {items.length > 0 ? (
+                      <ul className="flex flex-col gap-3 pb-4">
+                        {items.map((rel) => (
+                          <li
+                            key={rel.id}
+                            className="rounded-lg border border-line bg-surface p-4"
+                          >
+                            <div className="mb-2 flex items-center gap-2">
+                              {/* ponytail: same 0.5 threshold as Facts — bump per-type if reconciliation confidences cluster near it */}
+                              {isLowConfidence(rel) && (
+                                <span className={warnBadge}>
+                                  low confidence
+                                </span>
+                              )}
+                              <span className="font-mono text-xs text-muted">
+                                confidence {Math.round(rel.confidence * 100)}%
+                              </span>
+                            </div>
+                            <p className="mb-3 text-sm leading-relaxed">
+                              {rel.explanation}
+                            </p>
+                            <div className="flex flex-col gap-3 sm:flex-row">
+                              <FactCard
+                                fact={rel.a}
+                                label="Fact A"
+                                onOpen={() =>
+                                  setEvidence({
+                                    fact: rel.a,
+                                    filename: filenameOf(
+                                      topic,
+                                      rel.a.documentId,
+                                    ),
+                                  })
+                                }
+                              />
+                              <FactCard
+                                fact={rel.b}
+                                label="Fact B"
+                                onOpen={() =>
+                                  setEvidence({
+                                    fact: rel.b,
+                                    filename: filenameOf(
+                                      topic,
+                                      rel.b.documentId,
+                                    ),
+                                  })
+                                }
+                              />
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="pb-4 text-sm text-muted">None.</p>
+                    )}
+                  </details>
+                );
+              })}
+              {relationships.length === 0 && (
+                <p className="text-sm text-muted">
+                  {running ? "Generating…" : "No relationships yet."}
+                </p>
+              )}
+            </div>
+          </section>
 
-      <section>
-        <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-faint">
-          Documents
-        </h2>
-        <div className="flex flex-col gap-2">
-          {allDocuments.map((doc) => (
-            <label
-              key={doc.id}
-              className="flex items-center gap-3 rounded-md border border-line px-3 py-2 text-sm"
-            >
+          <section>
+            <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-faint">
+              All facts ({facts.length})
+            </h2>
+            <div className="mb-3 flex flex-wrap gap-2">
               <input
-                type="checkbox"
-                className="accent-accent"
-                checked={checkedIds.has(doc.id)}
-                disabled={running}
-                onChange={(e) => toggleDocument(doc.id, e.target.checked)}
+                type="search"
+                aria-label="Search facts"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search facts…"
+                className="w-64 rounded-md border border-line bg-transparent px-3 py-1.5 text-sm outline-none transition-colors focus:border-accent"
               />
-              <span className="truncate">{doc.filename}</span>
-              <span className="ml-auto shrink-0 font-mono text-xs text-muted">
-                {doc.factCount} facts
-              </span>
-            </label>
-          ))}
-          {allDocuments.length === 0 && (
-            <p className="text-sm text-muted">
-              No done documents yet — upload and extract first.
-            </p>
-          )}
-        </div>
-      </section>
-
-      <section>
-        <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-faint">
-          Relationships
-        </h2>
-        <div className="flex flex-col divide-y divide-line">
-          {Object.entries(TYPE_LABELS).map(([type, label]) => {
-            const items = relationships.filter((r) => r.type === type);
-            return (
-              <details key={type} open={items.length > 0}>
-                <summary className="flex cursor-pointer items-center gap-2 py-3 text-sm font-medium">
-                  <span className={relationshipBadge(type)}>{label}</span>
-                  <span className="text-muted">{items.length}</span>
-                </summary>
-                {items.length > 0 ? (
-                  <ul className="flex flex-col gap-3 pb-4">
-                    {items.map((rel) => (
-                      <li
-                        key={rel.id}
-                        className="rounded-lg border border-line bg-surface p-4"
-                      >
-                        <div className="mb-2 flex items-center gap-2">
-                          {/* ponytail: same 0.5 threshold as Facts — bump per-type if reconciliation confidences cluster near it */}
-                          {isLowConfidence(rel) && (
-                            <span className={warnBadge}>low confidence</span>
-                          )}
-                          <span className="font-mono text-xs text-muted">
-                            confidence {Math.round(rel.confidence * 100)}%
-                          </span>
-                        </div>
-                        <p className="mb-3 text-sm leading-relaxed">
-                          {rel.explanation}
-                        </p>
-                        <div className="flex gap-3">
-                          <FactCard
-                            fact={rel.a}
-                            label="Fact A"
-                            onOpen={() =>
-                              setEvidence({
-                                fact: rel.a,
-                                filename: filenameOf(topic, rel.a.documentId),
-                              })
-                            }
-                          />
-                          <FactCard
-                            fact={rel.b}
-                            label="Fact B"
-                            onOpen={() =>
-                              setEvidence({
-                                fact: rel.b,
-                                filename: filenameOf(topic, rel.b.documentId),
-                              })
-                            }
-                          />
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="pb-4 text-sm text-muted">None.</p>
-                )}
-              </details>
-            );
-          })}
-          {relationships.length === 0 && (
-            <p className="text-sm text-muted">
-              {running ? "Generating…" : "No relationships yet."}
-            </p>
-          )}
-        </div>
-      </section>
-
-      <section>
-        <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-faint">
-          All facts ({facts.length})
-        </h2>
-        <div className="mb-3 flex flex-wrap gap-2">
-          <input
-            type="search"
-            aria-label="Search facts"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search facts…"
-            className="w-64 rounded-md border border-line bg-transparent px-3 py-1.5 text-sm outline-none focus:border-accent"
-          />
-          <select
-            aria-label="Filter by document"
-            value={docFilter}
-            onChange={(e) => setDocFilter(e.target.value)}
-            className="rounded-md border border-line bg-transparent px-3 py-1.5 text-sm outline-none focus:border-accent"
-          >
-            <option value="all">All documents</option>
-            {topic.documents.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.filename}
-              </option>
-            ))}
-          </select>
-        </div>
-        <ul className="flex flex-col gap-2">
-          {visibleFacts.map((fact) => (
-            <li key={fact.id} className="rounded-md border border-line">
-              <button
-                type="button"
-                onClick={() =>
-                  setEvidence({
-                    fact,
-                    filename: filenameOf(topic, fact.documentId),
-                  })
-                }
-                className="w-full cursor-pointer rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-raised"
+              <select
+                aria-label="Filter by document"
+                value={docFilter}
+                onChange={(e) => setDocFilter(e.target.value)}
+                className="rounded-md border border-line bg-transparent px-3 py-1.5 text-sm outline-none transition-colors focus:border-accent"
               >
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium">{fact.entity}</span>
-                  <span>{fact.attribute}</span>
-                  <span className="text-muted">{String(fact.value)}</span>
-                  {isLowConfidence(fact) && (
-                    <span className={warnBadge}>low confidence</span>
-                  )}
-                  <span className="ml-auto shrink-0 font-mono text-xs text-faint">
-                    {filenameOf(topic, fact.documentId)} · p.{fact.pageNumber} ·{" "}
-                    {Math.round(fact.confidence * 100)}%
-                  </span>
-                </div>
-                {qualifiersText(fact.qualifiers) && (
-                  <p className="text-xs text-muted">
-                    {qualifiersText(fact.qualifiers)}
-                  </p>
-                )}
-              </button>
-            </li>
-          ))}
-          {visibleFacts.length === 0 && (
-            <p className="text-sm text-muted">
-              {facts.length === 0
-                ? running
-                  ? "Waiting for extraction…"
-                  : "No facts."
-                : "No facts match."}
-            </p>
-          )}
-        </ul>
-      </section>
+                <option value="all">All documents</option>
+                {topic.documents.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.filename}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <ul className="flex flex-col gap-2">
+              {visibleFacts.map((fact) => (
+                <li key={fact.id} className="rounded-md border border-line">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEvidence({
+                        fact,
+                        filename: filenameOf(topic, fact.documentId),
+                      })
+                    }
+                    className="w-full cursor-pointer rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-raised"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium">{fact.entity}</span>
+                      <span>{fact.attribute}</span>
+                      <span className="text-muted">{String(fact.value)}</span>
+                      {isLowConfidence(fact) && (
+                        <span className={warnBadge}>low confidence</span>
+                      )}
+                      <span className="ml-auto shrink-0 font-mono text-xs text-faint">
+                        {filenameOf(topic, fact.documentId)} · p.
+                        {fact.pageNumber} · {Math.round(fact.confidence * 100)}%
+                      </span>
+                    </div>
+                    {qualifiersText(fact.qualifiers) && (
+                      <p className="text-xs text-muted">
+                        {qualifiersText(fact.qualifiers)}
+                      </p>
+                    )}
+                  </button>
+                </li>
+              ))}
+              {visibleFacts.length === 0 && (
+                <p className="text-sm text-muted">
+                  {facts.length === 0
+                    ? running
+                      ? "Waiting for extraction…"
+                      : "No facts."
+                    : "No facts match."}
+                </p>
+              )}
+            </ul>
+          </section>
+        </div>
 
-      {evidence && (
-        <EvidenceDrawer
-          fact={evidence.fact}
-          filename={evidence.filename}
-          pageCount={
-            allDocuments.find((d) => d.id === evidence.fact.documentId)
-              ?.pageCount ?? null
-          }
-          onClose={() => setEvidence(null)}
-        />
-      )}
+        <aside className="flex flex-col gap-8 lg:sticky lg:top-20">
+          <section>
+            <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-faint">
+              Documents
+            </h2>
+            <div className="flex flex-col gap-2">
+              {allDocuments.map((doc) => (
+                <label
+                  key={doc.id}
+                  className="flex cursor-pointer items-center gap-3 rounded-md border border-line px-3 py-2 text-sm transition-colors hover:bg-raised"
+                >
+                  <input
+                    type="checkbox"
+                    className="accent-accent"
+                    checked={checkedIds.has(doc.id)}
+                    disabled={running}
+                    onChange={(e) => toggleDocument(doc.id, e.target.checked)}
+                  />
+                  <span className="truncate">{doc.filename}</span>
+                  <span className="ml-auto shrink-0 font-mono text-xs text-muted">
+                    {doc.factCount} facts
+                  </span>
+                </label>
+              ))}
+              {allDocuments.length === 0 && (
+                <p className="text-sm text-muted">
+                  No done documents yet — upload and extract first.
+                </p>
+              )}
+            </div>
+          </section>
+
+          {evidence && (
+            <EvidencePanel
+              key={evidence.fact.id}
+              fact={evidence.fact}
+              filename={evidence.filename}
+              pageCount={
+                allDocuments.find((d) => d.id === evidence.fact.documentId)
+                  ?.pageCount ?? null
+              }
+              onClose={() => setEvidence(null)}
+            />
+          )}
+        </aside>
+      </div>
     </div>
   );
 }
