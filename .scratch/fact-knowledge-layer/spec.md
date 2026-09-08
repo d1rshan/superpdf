@@ -59,7 +59,7 @@ The system must generalize: no hard-coded facts, filenames, schemas, or document
 
 **LLM providers**: All LLM work (extraction, pairwise comparison) uses the opencode Go gateway with `muse-spark-1.3-contributor` (opencode Go gateway, `x-opencode-session` header required) as the default model, configured via environment variables and called with non-streaming structured-output requests (the gateway's muse streaming is unreliable). Any model must be swappable by env change. Embeddings use Google `gemini-embedding-001` truncated to 1536 dimensions to match the pgvector column (swapped by env change; no OpenAI key required).
 
-**Parsing**: Unstructured API parses uploads; its elements carry page numbers. Elements are grouped into page-grouped Chunks (a small batch of pages per Chunk, tables converted to markdown) — the Chunk builder is a pure function.
+**Parsing**: `@firecrawl/pdf-inspector` parses uploads locally (Rust engine behind Firecrawl's anydoc, prebuilt native bindings) into per-page Markdown: one string per page with 1-indexed page attribution, tables detected natively and emitted as GitHub-Flavored Markdown. Pages are grouped into page-grouped Chunks (a small batch of pages per Chunk) — the Chunk builder is a pure function. Scanned/image-only pages are flagged `needsOcr` and yield thin text (no local OCR).
 
 **Schema** (six tables, Drizzle + pgvector):
 
@@ -72,7 +72,7 @@ The system must generalize: no hard-coded facts, filenames, schemas, or document
 
 Fact `value` is stored raw as stated (number + unit string); no normalized-value column. Unit/period/scope reasoning happens entirely in the comparison LLM, which sees both Facts with all Qualifiers — its verdict explanation is the output shown to users.
 
-**Ingest pipeline** (Inngest function, per upload): parse via Unstructured → build Chunks (pure function) → extract Facts per Chunk via LLM structured output (Evidence quote + page number mandatory; qualitative Facts first-class; low-confidence Facts flagged) → embed each Fact → insert. Runs automatically on upload; the Documents list polls status. Extraction happens at ingest, so Topics are a pure resolution step.
+**Ingest pipeline** (Inngest function, per upload): parse via pdf-inspector → build Chunks (pure function) → extract Facts per Chunk via LLM structured output (Evidence quote + page number mandatory; qualitative Facts first-class; low-confidence Facts flagged) → embed each Fact → insert. Runs automatically on upload; the Documents list polls status. Extraction happens at ingest, so Topics are a pure resolution step.
 
 **Resolve pipeline** (Inngest function, per Topic run): fetch the Topic's Facts → pgvector top-k candidate retrieval per Fact, similarity-threshold capped, restricted to the Topic's Documents → assemble comparison batches (pure function; self-pairs excluded) → batched LLM pairwise comparison → store Relationships with type, explanation, confidence. Regenerate = delete the Topic's Relationships and rerun. Comparison scope is the Topic's selected Documents only; there is no global or cross-topic resolution.
 
@@ -88,7 +88,7 @@ Fact `value` is stored raw as stated (number + unit string); no normalized-value
 
 **One seam**: the two pipeline entry points (Ingest, Resolve) run end-to-end against a real Postgres (Neon via `DATABASE_URL`, with pgvector) with the four external providers stubbed. Assertions land on database state: Facts carry Evidence quote + page number + Qualifiers; Relationships get the correct type, explanation, and confidence; Regenerate removes prior Relationships before recomputing.
 
-**Pure helpers tested directly at the same seam, without mocking**: the Chunk builder (Unstructured elements → page-grouped Chunks, tables preserved as markdown) and the candidate-batching logic (similarity results → comparison batches, self-pairs excluded, threshold respected). These are the decision-dense pieces; everything else around them is I/O glue.
+**Pure helpers tested directly at the same seam, without mocking**: the Chunk builder (parsed pages → page-grouped Chunks, parser-provided Markdown tables passed through unchanged) and the candidate-batching logic (similarity results → comparison batches, self-pairs excluded, threshold respected). These are the decision-dense pieces; everything else around them is I/O glue. The real parser additionally gets one fixture-based smoke check against a starter PDF (skipped when the fixture is absent).
 
 **Runner**: Vitest (`bun test` rejected by user choice). No prior art in the repo — this establishes the first test setup. No UI tests, no Inngest-server tests: pipeline functions are plain async functions; Inngest merely invokes them.
 
