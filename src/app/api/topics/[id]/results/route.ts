@@ -28,6 +28,7 @@ export async function GET(
       confidence: factRelationships.confidence,
       a: {
         id: factA.id,
+        documentId: factA.documentId,
         entity: factA.entity,
         attribute: factA.attribute,
         value: factA.value,
@@ -38,6 +39,7 @@ export async function GET(
       },
       b: {
         id: factB.id,
+        documentId: factB.documentId,
         entity: factB.entity,
         attribute: factB.attribute,
         value: factB.value,
