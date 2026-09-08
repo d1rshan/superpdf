@@ -96,6 +96,7 @@ export function TopicView({ topicId }: { topicId: string }) {
   const [topic, setTopic] = useState<(Topic & { status: string }) | null>(null);
   const [allDocuments, setAllDocuments] = useState<DocumentRow[]>([]);
   const [relationships, setRelationships] = useState<Relationship[]>([]);
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   const processingRef = useRef(false);
 
   const refresh = useCallback(async () => {
@@ -108,6 +109,9 @@ export function TopicView({ topicId }: { topicId: string }) {
       const detail = await detailRes.json();
       processingRef.current = detail.status === "running";
       setTopic(detail);
+      setCheckedIds(
+        new Set(detail.documents.map((d: SelectedDocument) => d.id)),
+      );
     }
     if (docsRes.ok) {
       const list: (DocumentRow & { factCount: number })[] =
@@ -126,7 +130,7 @@ export function TopicView({ topicId }: { topicId: string }) {
       try {
         await refresh();
       } finally {
-        timer = setTimeout(loop, processingRef.current ? 2000 : 10000);
+        timer = setTimeout(loop, processingRef.current ? 5000 : 15000);
       }
     };
     loop();
@@ -135,19 +139,19 @@ export function TopicView({ topicId }: { topicId: string }) {
 
   const toggleDocument = useCallback(
     async (documentId: string, selected: boolean) => {
-      if (!topic) return;
-      const current = topic.documents.map((d) => d.id);
+      const current = [...checkedIds];
       const next = selected
         ? [...new Set([...current, documentId])]
         : current.filter((id) => id !== documentId);
-      await fetch(`/api/topics/${topicId}`, {
+      // ponytail: optimistic — checkbox flips instantly, the poll reconciles with the server
+      setCheckedIds(new Set(next));
+      fetch(`/api/topics/${topicId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ documentIds: next }),
       });
-      await refresh();
     },
-    [topic, topicId, refresh],
+    [checkedIds, topicId],
   );
 
   const generate = useCallback(async () => {
@@ -161,7 +165,6 @@ export function TopicView({ topicId }: { topicId: string }) {
   }
 
   const running = topic.status === "running";
-  const selectedIds = new Set(topic.documents.map((d) => d.id));
 
   return (
     <div className="flex flex-col gap-8">
@@ -205,7 +208,7 @@ export function TopicView({ topicId }: { topicId: string }) {
             >
               <input
                 type="checkbox"
-                checked={selectedIds.has(doc.id)}
+                checked={checkedIds.has(doc.id)}
                 disabled={running}
                 onChange={(e) => toggleDocument(doc.id, e.target.checked)}
               />

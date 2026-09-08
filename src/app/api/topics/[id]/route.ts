@@ -59,9 +59,11 @@ export async function PATCH(
         : [];
     await db.delete(topicDocuments).where(eq(topicDocuments.topicId, id));
     if (existing.length > 0) {
+      // ponytail: overlapping PATCHes interleave delete/insert — make the write idempotent instead of locking
       await db
         .insert(topicDocuments)
-        .values(existing.map((d) => ({ topicId: id, documentId: d.id })));
+        .values(existing.map((d) => ({ topicId: id, documentId: d.id })))
+        .onConflictDoNothing();
     }
   }
 

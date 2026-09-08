@@ -42,7 +42,7 @@ export function DocumentsView() {
     let timer: ReturnType<typeof setTimeout>;
     const loop = async () => {
       await refresh();
-      timer = setTimeout(loop, processingRef.current ? 2000 : 10000);
+      timer = setTimeout(loop, processingRef.current ? 5000 : 15000);
     };
     loop();
     return () => clearTimeout(timer);
