@@ -59,7 +59,7 @@ The system must generalize: no hard-coded facts, filenames, schemas, or document
 
 **LLM providers**: All LLM work (extraction, pairwise comparison) uses the opencode Go gateway with `mimo-v2.5` (chat-completions) as the default model, configured via environment variables and called with non-streaming structured-output requests. `LLM_API_STYLE` selects the endpoint adapter (`chat` for mimo/glm/kimi-class models, `responses` for muse models) so any model is swappable by env change. Embeddings use OpenAI `text-embedding-3-small` (1536-dim default matching the pgvector column; cheapest OpenAI embedding model; swapped by env change).
 
-**Parsing**: `@firecrawl/pdf-inspector` parses uploads locally (Rust engine behind Firecrawl's anydoc, prebuilt native bindings) into per-page Markdown: one string per page with 1-indexed page attribution, tables detected natively and emitted as GitHub-Flavored Markdown. Pages are grouped into page-grouped Chunks (a small batch of pages per Chunk) — the Chunk builder is a pure function. Scanned/image-only pages are flagged `needsOcr` and yield thin text (no local OCR).
+**Parsing**: `@firecrawl/pdf-inspector` parses uploads locally (Rust engine behind Firecrawl's anydoc, prebuilt native bindings) into per-page Markdown: one string per page with 1-indexed page attribution, tables detected natively and emitted as GitHub-Flavored Markdown. Pages are grouped into page-grouped Chunks (25 pages per Chunk) — the Chunk builder is a pure function. Scanned/image-only pages are flagged `needsOcr` and yield thin text (no local OCR).
 
 **Schema** (six tables, Drizzle + pgvector):
 
@@ -72,7 +72,7 @@ The system must generalize: no hard-coded facts, filenames, schemas, or document
 
 Fact `value` is stored raw as stated (number + unit string); no normalized-value column. Unit/period/scope reasoning happens entirely in the comparison LLM, which sees both Facts with all Qualifiers — its verdict explanation is the output shown to users.
 
-**Ingest pipeline** (Inngest function, per upload): parse via pdf-inspector → build Chunks (pure function) → extract Facts per Chunk via LLM structured output (Evidence quote + page number mandatory; qualitative Facts first-class; low-confidence Facts flagged) → embed each Fact → insert. Chunks are extracted with bounded parallelism (small concurrency cap) so long PDFs don't serialize gateway calls. Runs automatically on upload; the Documents list polls status. Extraction happens at ingest, so Topics are a pure resolution step.
+**Ingest pipeline** (Inngest function, per upload): parse via pdf-inspector → build Chunks (pure function) → extract Facts per Chunk via LLM structured output (material, citable Facts only — headline metrics, status changes, targets, not every table row; Evidence quote + page number mandatory; qualitative Facts first-class; low-confidence Facts flagged) → embed each Fact → insert. Chunks are extracted with bounded parallelism (small concurrency cap) so long PDFs don't serialize gateway calls. Runs automatically on upload; the Documents list polls status. Extraction happens at ingest, so Topics are a pure resolution step.
 
 **Resolve pipeline** (Inngest function, per Topic run): fetch the Topic's Facts → pgvector top-k candidate retrieval per Fact, similarity-threshold capped, restricted to the Topic's Documents → assemble comparison batches (pure function; self-pairs excluded) → batched LLM pairwise comparison → store Relationships with type, explanation, confidence. Regenerate = delete the Topic's Relationships and rerun. Comparison scope is the Topic's selected Documents only; there is no global or cross-topic resolution.
 
@@ -109,5 +109,5 @@ Fact `value` is stored raw as stated (number + unit string); no normalized-value
 - Commit at relevant checkpoints throughout implementation (schema, pipelines, UI slices), using conventional commit messages (`feat:`, `fix:`, `chore:`, `docs:`, `test:`). Never bundle unrelated changes into one commit.
 - The glossary in `CONTEXT.md` is the canonical vocabulary (Document, Chunk, Fact, Qualifier, Evidence, Topic, Relationship, Corroboration, Reconciliation, Regenerate); use these names in code and UI.
 - Starter datasets live in `.data/delhivery/` and `.data/india-macroeconomy/` (six curated ~100-page PDFs, table-heavy) for demo and manual verification; they are not committed app fixtures.
-- Known gateway risk: muse models on opencode Go have exhibited region gating and intermittent errors — hence env-swappable model config and the smoke test.
+- Known gateway risk: gateway models have exhibited region gating and intermittent errors (muse models notably; muse is not the default) — hence env-swappable model config and the smoke test.
 - README must document: setup/run, a ≤3-minute demo video, approach and trade-offs, limitations and next steps (per assignment requirements).

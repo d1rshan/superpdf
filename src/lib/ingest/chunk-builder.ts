@@ -9,8 +9,8 @@ export type ChunkDraft = {
   text: string;
 };
 
-// ponytail: 10 pages per chunk trades extraction pinning (wider page clamp) for fewer LLM calls; revisit once extraction quality is measurable
-export const PAGES_PER_CHUNK = 10;
+// ponytail: 25 pages per chunk trades extraction pinning (wider page clamp) for fewer LLM calls; revisit once extraction quality is measurable
+export const PAGES_PER_CHUNK = 25;
 
 export function buildChunks(pages: ParsedPage[]): ChunkDraft[] {
   const chunks: ChunkDraft[] = [];

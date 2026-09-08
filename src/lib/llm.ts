@@ -56,18 +56,25 @@ function gateway() {
     : (model: string) => openai.chat(model);
 }
 
-const EXTRACTION_PROMPT = `You extract factual claims from a slice of a document. The text is prefixed with page markers like "[page 3]".
+const EXTRACTION_PROMPT = `You extract meaningful factual claims from a slice of a document. The text is prefixed with page markers like "[page 3]".
 
-Return every distinct fact stated, both numeric (revenue, growth rates, counts) and qualitative (appointments, resignations, approvals, status changes). For each fact:
+Return only material facts a reader would cite when summarizing or fact-checking the document:
+- headline metrics (revenue, profit, margins, volumes, growth, market share) and their period-over-period changes
+- corporate status changes (appointments, resignations, board changes, approvals, acquisitions, partnerships)
+- stated targets, guidance, forecasts, and notable commitments
+
+Skip layout noise, boilerplate, and repeated restatements of the same metric. When a table shows one metric across several periods, keep the periods that carry the story (current, prior year, change) rather than every row.
+
+For each fact:
 - entity: who or what the claim is about.
 - attribute: the specific property claimed.
 - value: exactly as stated in the document — keep the original number and unit (e.g. "₹8,032 crore"); never convert, round, or normalize. For qualitative claims, the stated outcome.
 - qualifiers: time period, scope (e.g. standalone vs consolidated), and location, only when stated; use null otherwise.
-- evidenceQuote: a verbatim quote from the text supporting the fact.
+- evidenceQuote: a verbatim quote from the text supporting this fact.
 - pageNumber: the page whose marker the evidence appears under.
 - confidence: 0 to 1.
 
-Do not invent facts, infer values, or restate the same fact twice.`;
+Do not invent facts, infer values, or restate the same fact twice. Prefer fewer, higher-confidence facts over an exhaustive list.`;
 
 export async function extractFacts(
   text: string,
