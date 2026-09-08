@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { statusBadge } from "@/lib/status-badges";
+
 type DocumentRow = {
   id: string;
   filename: string;
@@ -12,14 +14,6 @@ type DocumentRow = {
 };
 
 const ACTIVE_STATUSES = new Set(["uploading", "parsing", "extracting"]);
-
-const BADGE_STYLES: Record<string, string> = {
-  uploading: "bg-amber-100 text-amber-800",
-  parsing: "bg-blue-100 text-blue-800",
-  extracting: "bg-purple-100 text-purple-800",
-  done: "bg-green-100 text-green-800",
-  failed: "bg-red-100 text-red-800",
-};
 
 export function DocumentsView() {
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
@@ -76,10 +70,10 @@ export function DocumentsView() {
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
       <label
-        className={`flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed p-10 text-center transition-colors ${
+        className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed p-10 text-center transition-colors ${
           dragging
-            ? "border-green-600 bg-green-50"
-            : "border-zinc-300 hover:border-zinc-400"
+            ? "border-accent bg-accent-dim"
+            : "border-line hover:border-faint"
         }`}
         onDragOver={(e) => {
           e.preventDefault();
@@ -108,11 +102,11 @@ export function DocumentsView() {
         {documents.map((doc) => (
           <li
             key={doc.id}
-            className="flex flex-col gap-2 rounded-xl border border-zinc-200 p-4"
+            className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-4"
           >
             <div className="flex items-center justify-between gap-4">
               <span className="truncate font-medium">{doc.filename}</span>
-              <div className="flex shrink-0 items-center gap-3 text-sm text-zinc-500">
+              <div className="flex shrink-0 items-center gap-3 font-mono text-xs text-muted">
                 {doc.pageCount != null && (
                   <span>
                     {doc.pageCount} {doc.pageCount === 1 ? "page" : "pages"}
@@ -123,16 +117,12 @@ export function DocumentsView() {
                     {doc.factCount} {doc.factCount === 1 ? "fact" : "facts"}
                   </span>
                 )}
-                <span
-                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-                    BADGE_STYLES[doc.status] ?? "bg-zinc-100 text-zinc-600"
-                  }`}
-                >
-                  {doc.status}
-                </span>
+                <span className={statusBadge(doc.status)}>{doc.status}</span>
               </div>
             </div>
-            {doc.error && <p className="text-sm text-red-600">{doc.error}</p>}
+            {doc.error && (
+              <p className="text-sm text-badge-error-text">{doc.error}</p>
+            )}
           </li>
         ))}
       </ul>

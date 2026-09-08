@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { EvidenceDrawer } from "@/components/evidence-drawer";
 import { isLowConfidence } from "@/lib/confidence";
 import { qualifiersText } from "@/lib/qualifiers";
+import { relationshipBadge, statusBadge, warnBadge } from "@/lib/status-badges";
 
 type SelectedDocument = {
   id: string;
@@ -58,27 +59,11 @@ type Fact = RelatedFact & { documentId: string };
 
 type EvidenceTarget = { fact: Fact; filename: string };
 
-const STATUS_STYLES: Record<string, string> = {
-  idle: "bg-zinc-100 text-zinc-600",
-  running: "bg-blue-100 text-blue-800",
-  done: "bg-green-100 text-green-800",
-  failed: "bg-red-100 text-red-800",
-};
-
 const TYPE_LABELS: Record<string, string> = {
   SAME_FACT: "Corroborated",
   CONTRADICTS: "Contradicted",
   CONTEXTUALIZES: "Contextualized",
 };
-
-const TYPE_STYLES: Record<string, string> = {
-  SAME_FACT: "bg-green-100 text-green-800",
-  CONTRADICTS: "bg-red-100 text-red-800",
-  CONTEXTUALIZES: "bg-purple-100 text-purple-800",
-};
-
-const LOW_CONFIDENCE_BADGE =
-  "rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800";
 
 function filenameOf(topic: Topic, documentId: string): string {
   return (
@@ -99,23 +84,21 @@ function FactCard({
     <button
       type="button"
       onClick={onOpen}
-      className="flex-1 cursor-pointer rounded-lg bg-zinc-50 p-3 text-left text-sm hover:bg-zinc-100"
+      className="flex-1 cursor-pointer rounded-md bg-raised p-3 text-left text-sm transition-colors hover:bg-surface"
     >
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-medium text-zinc-500">{label}</p>
-        {isLowConfidence(fact) && (
-          <span className={LOW_CONFIDENCE_BADGE}>low confidence</span>
-        )}
+        <p className="font-mono text-xs uppercase tracking-widest text-faint">
+          {label}
+        </p>
+        {isLowConfidence(fact) && <span className={warnBadge}>low conf</span>}
       </div>
       <p className="font-medium">{fact.entity}</p>
       <p>{fact.attribute}</p>
-      <p className="text-zinc-700">{String(fact.value)}</p>
+      <p className="text-muted">{String(fact.value)}</p>
       {qualifiersText(fact.qualifiers) && (
-        <p className="text-xs text-zinc-500">
-          {qualifiersText(fact.qualifiers)}
-        </p>
+        <p className="text-xs text-muted">{qualifiersText(fact.qualifiers)}</p>
       )}
-      <p className="mt-1 text-xs text-zinc-400">
+      <p className="mt-1 font-mono text-xs text-faint">
         p.{fact.pageNumber} · {Math.round(fact.confidence * 100)}%
       </p>
     </button>
@@ -196,7 +179,7 @@ export function TopicView({ topicId }: { topicId: string }) {
   }, [topicId, refresh]);
 
   if (!topic) {
-    return <p className="text-sm text-zinc-500">Loading…</p>;
+    return <p className="text-sm text-muted">Loading…</p>;
   }
 
   const running = topic.status === "running";
@@ -216,57 +199,49 @@ export function TopicView({ topicId }: { topicId: string }) {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/topics"
-            className="text-sm text-zinc-500 hover:text-zinc-700"
-          >
+        <div className="flex items-baseline gap-3">
+          <Link href="/topics" className="text-sm text-muted hover:text-text">
             Topics
           </Link>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {topic.name}
-          </h1>
+          <h1 className="font-editorial text-3xl">{topic.name}</h1>
         </div>
-        <span
-          className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-            STATUS_STYLES[topic.status] ?? STATUS_STYLES.idle
-          }`}
-        >
-          {topic.status}
-        </span>
+        <span className={statusBadge(topic.status)}>{topic.status}</span>
       </div>
 
       <button
         type="button"
         onClick={generate}
         disabled={running}
-        className="self-start rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+        className="self-start rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-transform hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
       >
         {topic.status === "done" ? "Regenerate" : "Generate"}
       </button>
 
       <section>
-        <h2 className="mb-3 text-sm font-semibold text-zinc-500">Documents</h2>
+        <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-faint">
+          Documents
+        </h2>
         <div className="flex flex-col gap-2">
           {allDocuments.map((doc) => (
             <label
               key={doc.id}
-              className="flex items-center gap-3 rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+              className="flex items-center gap-3 rounded-md border border-line px-3 py-2 text-sm"
             >
               <input
                 type="checkbox"
+                className="accent-accent"
                 checked={checkedIds.has(doc.id)}
                 disabled={running}
                 onChange={(e) => toggleDocument(doc.id, e.target.checked)}
               />
               <span className="truncate">{doc.filename}</span>
-              <span className="ml-auto shrink-0 text-xs text-zinc-500">
+              <span className="ml-auto shrink-0 font-mono text-xs text-muted">
                 {doc.factCount} facts
               </span>
             </label>
           ))}
           {allDocuments.length === 0 && (
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-muted">
               No done documents yet — upload and extract first.
             </p>
           )}
@@ -274,43 +249,37 @@ export function TopicView({ topicId }: { topicId: string }) {
       </section>
 
       <section>
-        <h2 className="mb-3 text-sm font-semibold text-zinc-500">
+        <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-faint">
           Relationships
         </h2>
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col divide-y divide-line">
           {Object.entries(TYPE_LABELS).map(([type, label]) => {
             const items = relationships.filter((r) => r.type === type);
             return (
               <details key={type} open={items.length > 0}>
-                <summary className="flex cursor-pointer items-center gap-2 text-sm font-medium">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      TYPE_STYLES[type] ?? "bg-zinc-100 text-zinc-600"
-                    }`}
-                  >
-                    {label}
-                  </span>
-                  <span className="text-zinc-500">{items.length}</span>
+                <summary className="flex cursor-pointer items-center gap-2 py-3 text-sm font-medium">
+                  <span className={relationshipBadge(type)}>{label}</span>
+                  <span className="text-muted">{items.length}</span>
                 </summary>
                 {items.length > 0 ? (
-                  <ul className="mt-3 flex flex-col gap-3">
+                  <ul className="flex flex-col gap-3 pb-4">
                     {items.map((rel) => (
                       <li
                         key={rel.id}
-                        className="rounded-xl border border-zinc-200 p-4"
+                        className="rounded-lg border border-line bg-surface p-4"
                       >
                         <div className="mb-2 flex items-center gap-2">
                           {/* ponytail: same 0.5 threshold as Facts — bump per-type if reconciliation confidences cluster near it */}
                           {isLowConfidence(rel) && (
-                            <span className={LOW_CONFIDENCE_BADGE}>
-                              low confidence
-                            </span>
+                            <span className={warnBadge}>low conf</span>
                           )}
-                          <span className="text-xs text-zinc-500">
+                          <span className="font-mono text-xs text-muted">
                             confidence {Math.round(rel.confidence * 100)}%
                           </span>
                         </div>
-                        <p className="mb-3 text-sm">{rel.explanation}</p>
+                        <p className="mb-3 text-sm leading-relaxed">
+                          {rel.explanation}
+                        </p>
                         <div className="flex gap-3">
                           <FactCard
                             fact={rel.a}
@@ -337,13 +306,13 @@ export function TopicView({ topicId }: { topicId: string }) {
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-3 text-sm text-zinc-500">None.</p>
+                  <p className="pb-4 text-sm text-muted">None.</p>
                 )}
               </details>
             );
           })}
           {relationships.length === 0 && (
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-muted">
               {running ? "Generating…" : "No relationships yet."}
             </p>
           )}
@@ -351,7 +320,7 @@ export function TopicView({ topicId }: { topicId: string }) {
       </section>
 
       <section>
-        <h2 className="mb-3 text-sm font-semibold text-zinc-500">
+        <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-faint">
           All facts ({facts.length})
         </h2>
         <div className="mb-3 flex flex-wrap gap-2">
@@ -361,13 +330,13 @@ export function TopicView({ topicId }: { topicId: string }) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search facts…"
-            className="w-64 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm"
+            className="w-64 rounded-md border border-line bg-transparent px-3 py-1.5 text-sm outline-none focus:border-accent"
           />
           <select
             aria-label="Filter by document"
             value={docFilter}
             onChange={(e) => setDocFilter(e.target.value)}
-            className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm"
+            className="rounded-md border border-line bg-transparent px-3 py-1.5 text-sm outline-none focus:border-accent"
           >
             <option value="all">All documents</option>
             {topic.documents.map((d) => (
@@ -379,7 +348,7 @@ export function TopicView({ topicId }: { topicId: string }) {
         </div>
         <ul className="flex flex-col gap-2">
           {visibleFacts.map((fact) => (
-            <li key={fact.id} className="rounded-lg border border-zinc-200">
+            <li key={fact.id} className="rounded-md border border-line">
               <button
                 type="button"
                 onClick={() =>
@@ -388,22 +357,22 @@ export function TopicView({ topicId }: { topicId: string }) {
                     filename: filenameOf(topic, fact.documentId),
                   })
                 }
-                className="w-full cursor-pointer rounded-lg px-3 py-2 text-left text-sm hover:bg-zinc-50"
+                className="w-full cursor-pointer rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-raised"
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium">{fact.entity}</span>
                   <span>{fact.attribute}</span>
-                  <span className="text-zinc-700">{String(fact.value)}</span>
+                  <span className="text-muted">{String(fact.value)}</span>
                   {isLowConfidence(fact) && (
-                    <span className={LOW_CONFIDENCE_BADGE}>low confidence</span>
+                    <span className={warnBadge}>low conf</span>
                   )}
-                  <span className="ml-auto shrink-0 text-xs text-zinc-500">
+                  <span className="ml-auto shrink-0 font-mono text-xs text-faint">
                     {filenameOf(topic, fact.documentId)} · p.{fact.pageNumber} ·{" "}
                     {Math.round(fact.confidence * 100)}%
                   </span>
                 </div>
                 {qualifiersText(fact.qualifiers) && (
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-muted">
                     {qualifiersText(fact.qualifiers)}
                   </p>
                 )}
@@ -411,7 +380,7 @@ export function TopicView({ topicId }: { topicId: string }) {
             </li>
           ))}
           {visibleFacts.length === 0 && (
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-muted">
               {facts.length === 0
                 ? running
                   ? "Waiting for extraction…"

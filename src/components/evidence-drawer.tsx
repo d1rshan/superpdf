@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { isLowConfidence } from "@/lib/confidence";
 import { qualifiersText } from "@/lib/qualifiers";
+import { warnBadge } from "@/lib/status-badges";
 
 export type FactWithEvidence = {
   documentId: string;
@@ -53,23 +54,23 @@ export function EvidenceDrawer({
         role="dialog"
         aria-modal="true"
         aria-label={`Evidence from ${filename}, page ${page}`}
-        className="relative flex h-full w-full max-w-2xl flex-col gap-4 overflow-y-auto border-l border-zinc-200 bg-white p-6"
+        className="relative flex h-full w-full max-w-2xl flex-col gap-4 overflow-y-auto border-l border-line bg-canvas p-6"
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-medium text-zinc-500">{filename}</p>
-            <h2 className="text-lg font-semibold">Evidence</h2>
+            <p className="font-mono text-xs uppercase tracking-widest text-faint">
+              {filename}
+            </p>
+            <h2 className="font-editorial text-2xl">Evidence</h2>
           </div>
           <div className="flex items-center gap-2">
             {isLowConfidence(fact) && (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                low confidence
-              </span>
+              <span className={warnBadge}>low conf</span>
             )}
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-zinc-200 px-2 py-1 text-sm hover:bg-zinc-50"
+              className="rounded-md border border-line px-2 py-1 text-sm transition-colors hover:bg-raised"
             >
               Close
             </button>
@@ -77,32 +78,30 @@ export function EvidenceDrawer({
         </div>
 
         <div className="flex items-center gap-2 text-sm">
-          <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">
-            p.{fact.pageNumber}
-          </span>
-          <span className="text-xs text-zinc-500">
+          <span className={warnBadge}>p.{fact.pageNumber}</span>
+          <span className="font-mono text-xs text-muted">
             {Math.round(fact.confidence * 100)}% confidence
           </span>
           {qualifiersText(fact.qualifiers) && (
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-muted">
               {qualifiersText(fact.qualifiers)}
             </span>
           )}
         </div>
 
-        <blockquote className="rounded-lg bg-zinc-50 p-4 text-sm leading-relaxed">
+        <blockquote className="rounded-md bg-raised p-4 text-sm leading-relaxed">
           “{fact.evidenceQuote}”
         </blockquote>
 
         <div className="flex items-center gap-2 text-sm">
-          <span className="text-xs font-medium text-zinc-500">
+          <span className="font-mono text-xs uppercase tracking-widest text-faint">
             Jump to page
           </span>
           <button
             type="button"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
-            className="rounded-lg border border-zinc-200 px-2 py-1 disabled:opacity-50"
+            className="rounded-md border border-line px-2 py-1 transition-colors hover:bg-raised disabled:opacity-50"
           >
             ‹
           </button>
@@ -117,13 +116,13 @@ export function EvidenceDrawer({
               if (Number.isFinite(n))
                 setPage(Math.min(maxPage, Math.max(1, n)));
             }}
-            className="w-16 rounded-lg border border-zinc-300 px-2 py-1"
+            className="w-16 rounded-md border border-line bg-transparent px-2 py-1 outline-none focus:border-accent"
           />
           <button
             type="button"
             onClick={() => setPage((p) => Math.min(maxPage, p + 1))}
             disabled={page >= maxPage}
-            className="rounded-lg border border-zinc-200 px-2 py-1 disabled:opacity-50"
+            className="rounded-md border border-line px-2 py-1 transition-colors hover:bg-raised disabled:opacity-50"
           >
             ›
           </button>
@@ -134,7 +133,7 @@ export function EvidenceDrawer({
           key={page}
           title={`PDF page ${page}`}
           src={`${pdfUrl}#page=${page}&toolbar=1&view=FitH`}
-          className="h-full min-h-96 w-full flex-1 rounded-lg border border-zinc-200"
+          className="h-full min-h-96 w-full flex-1 rounded-md border border-line"
         />
       </aside>
     </div>

@@ -3,18 +3,13 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+import { statusBadge } from "@/lib/status-badges";
+
 type TopicRow = {
   id: string;
   name: string;
   status: string;
   createdAt: string;
-};
-
-const STATUS_STYLES: Record<string, string> = {
-  idle: "bg-zinc-100 text-zinc-600",
-  running: "bg-blue-100 text-blue-800",
-  done: "bg-green-100 text-green-800",
-  failed: "bg-red-100 text-red-800",
 };
 
 export function TopicsView() {
@@ -58,11 +53,11 @@ export function TopicsView() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="New topic name"
-          className="flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-green-600"
+          className="flex-1 rounded-md border border-line bg-transparent px-3 py-2 text-sm outline-none focus:border-accent"
         />
         <button
           type="submit"
-          className="rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800"
+          className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-transform hover:opacity-90 active:scale-[0.98]"
         >
           Create
         </button>
@@ -70,24 +65,23 @@ export function TopicsView() {
 
       <ul className="flex flex-col gap-3">
         {topics.map((topic) => (
-          <li key={topic.id} className="rounded-xl border border-zinc-200 p-4">
+          <li
+            key={topic.id}
+            className="rounded-lg border border-line bg-surface p-4"
+          >
             <Link
               href={`/topics/${topic.id}`}
               className="flex items-center justify-between gap-4"
             >
               <span className="truncate font-medium">{topic.name}</span>
-              <span
-                className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                  STATUS_STYLES[topic.status] ?? STATUS_STYLES.idle
-                }`}
-              >
+              <span className={`shrink-0 ${statusBadge(topic.status)}`}>
                 {topic.status}
               </span>
             </Link>
           </li>
         ))}
         {topics.length === 0 && (
-          <p className="text-sm text-zinc-500">No topics yet.</p>
+          <p className="text-sm text-muted">No topics yet.</p>
         )}
       </ul>
     </div>

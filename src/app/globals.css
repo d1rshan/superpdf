@@ -1,26 +1,123 @@
 @import "tailwindcss";
 
+/* Dark near-black + neon green (default); light = white + neon green via [data-theme="light"]. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --canvas: #0a0a0a;
+  --surface: #111211;
+  --surface-raised: #171817;
+  --line: #262826;
+  --text: #ececea;
+  --text-muted: #9b9d99;
+  --text-faint: #6b6e69;
+  --accent: #00e676;
+  --accent-ink: #071008;
+  --accent-dim: rgba(0, 230, 118, 0.12);
+  --badge-neutral-bg: #1c1e1c;
+  --badge-neutral-text: #9b9d99;
+  --badge-active-bg: rgba(0, 230, 118, 0.14);
+  --badge-active-text: #00e676;
+  --badge-warn-bg: rgba(255, 196, 0, 0.12);
+  --badge-warn-text: #f5c518;
+  --badge-error-bg: rgba(255, 82, 82, 0.12);
+  --badge-error-text: #ff7a7a;
+  --badge-info-bg: rgba(120, 160, 255, 0.12);
+  --badge-info-text: #8fb0ff;
+}
+
+[data-theme="light"] {
+  --canvas: #ffffff;
+  --surface: #fafaf9;
+  --surface-raised: #f4f4f2;
+  --line: #e6e6e3;
+  --text: #161816;
+  --text-muted: #6f726d;
+  --text-faint: #9a9d97;
+  /* ponytail: slightly deepened neon for AA contrast on white; same hue */
+  --accent: #00b85c;
+  --accent-ink: #ffffff;
+  --accent-dim: rgba(0, 184, 92, 0.1);
+  --badge-neutral-bg: #f1f1ef;
+  --badge-neutral-text: #6f726d;
+  --badge-active-bg: #e3f6ea;
+  --badge-active-text: #067a3d;
+  --badge-warn-bg: #fbf3db;
+  --badge-warn-text: #956400;
+  --badge-error-bg: #fdebec;
+  --badge-error-text: #9f2f2d;
+  --badge-info-bg: #e8f0fe;
+  --badge-info-text: #2c5cc5;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-raised: var(--surface-raised);
+  --color-line: var(--line);
+  --color-text: var(--text);
+  --color-muted: var(--text-muted);
+  --color-faint: var(--text-faint);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-dim: var(--accent-dim);
+  --color-badge-neutral-bg: var(--badge-neutral-bg);
+  --color-badge-neutral-text: var(--badge-neutral-text);
+  --color-badge-active-bg: var(--badge-active-bg);
+  --color-badge-active-text: var(--badge-active-text);
+  --color-badge-warn-bg: var(--badge-warn-bg);
+  --color-badge-warn-text: var(--badge-warn-text);
+  --color-badge-error-bg: var(--badge-error-bg);
+  --color-badge-error-text: var(--badge-error-text);
+  --color-badge-info-bg: var(--badge-info-bg);
+  --color-badge-info-text: var(--badge-info-text);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-serif: var(--font-instrument-serif);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--canvas);
+  color: var(--text);
+  font-family: var(--font-geist-sans), "Helvetica Neue", sans-serif;
+  line-height: 1.6;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* Editorial serif headings: tight tracking, tight leading */
+.font-editorial {
+  font-family: var(--font-instrument-serif), serif;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+/* Status / meta badges: mono, uppercase, wide tracking */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.125rem 0.625rem;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Section toggles: flat, divider-separated, + / − per minimalist spec */
+details > summary {
+  list-style: none;
+}
+details > summary::-webkit-details-marker {
+  display: none;
+}
+details > summary::after {
+  content: "+";
+  font-family: var(--font-geist-mono), monospace;
+  color: var(--text-faint);
+}
+details[open] > summary::after {
+  content: "−";
 }
