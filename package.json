@@ -17,6 +17,7 @@
   "dependencies": {
     "@ai-sdk/google": "^4.0.64",
     "@ai-sdk/openai": "^4.0.60",
+    "@firecrawl/pdf-inspector": "^1.18.0",
     "@vercel/blob": "^2.8.0",
     "ai": "^7.0.93",
     "drizzle-orm": "^0.45.2",

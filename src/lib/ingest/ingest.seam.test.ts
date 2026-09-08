@@ -3,7 +3,7 @@ import { afterAll, describe, expect, test, vi } from "vitest";
 import { db } from "../db";
 import { chunks, documents, facts } from "../db/schema";
 import type { ExtractedFact } from "../llm";
-import type { UnstructuredElement } from "./chunk-builder";
+import type { ParsedPage } from "./chunk-builder";
 import { ingestDocument } from "./ingest";
 
 const createdIds: string[] = [];
@@ -30,8 +30,8 @@ async function createDocument(): Promise<string> {
   return doc.id;
 }
 
-function page(number: number, text: string): UnstructuredElement {
-  return { type: "NarrativeText", text, metadata: { page_number: number } };
+function mkPage(n: number, text: string): ParsedPage {
+  return { page: n, text };
 }
 
 function fact(overrides: Partial<ExtractedFact> = {}): ExtractedFact {
@@ -58,10 +58,10 @@ describe("ingestDocument seam", () => {
   test("stubbed parse output produces expected Chunk rows and page count", async () => {
     const documentId = await createDocument();
     const parse = async () => [
-      page(1, "Revenue grew in FY24."),
-      page(2, "Margins improved."),
-      page(3, "Headcount fell."),
-      page(4, "Debt rose."),
+      mkPage(1, "Revenue grew in FY24."),
+      mkPage(2, "Margins improved."),
+      mkPage(3, "Headcount fell."),
+      mkPage(4, "Debt rose."),
     ];
     const extract = vi.fn(async () => [fact()]);
     const embed = vi.fn(embedStub);
@@ -91,7 +91,7 @@ describe("ingestDocument seam", () => {
   test("failed parse records an error message and marks the document failed", async () => {
     const documentId = await createDocument();
     const parse = async () => {
-      throw new Error("unstructured unreachable");
+      throw new Error("parser failed");
     };
 
     await ingestDocument(documentId, { parse });
@@ -101,7 +101,7 @@ describe("ingestDocument seam", () => {
       .from(documents)
       .where(eq(documents.id, documentId));
     expect(doc.status).toBe("failed");
-    expect(doc.error).toBe("unstructured unreachable");
+    expect(doc.error).toBe("parser failed");
     expect(
       await db.select().from(chunks).where(eq(chunks.documentId, documentId)),
     ).toHaveLength(0);
@@ -110,8 +110,8 @@ describe("ingestDocument seam", () => {
   test("stubbed extraction stores Facts with evidence, qualifiers, raw value, and vectors", async () => {
     const documentId = await createDocument();
     const parse = async () => [
-      page(1, "Revenue of ₹8,032 crore."),
-      page(2, "A director resigned."),
+      mkPage(1, "Revenue of ₹8,032 crore."),
+      mkPage(2, "A director resigned."),
     ];
     const extract = vi.fn(async (text: string) => [
       fact({ pageNumber: 1, evidenceQuote: "Revenue of ₹8,032 crore." }),
@@ -174,7 +174,7 @@ describe("ingestDocument seam", () => {
 
   test("extraction failures record an error and leave no Facts behind", async () => {
     const documentId = await createDocument();
-    const parse = async () => [page(1, "Some text.")];
+    const parse = async () => [mkPage(1, "Some text.")];
     const extract = vi.fn(async () => {
       throw new Error("gateway unreachable");
     });

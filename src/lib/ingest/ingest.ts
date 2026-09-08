@@ -8,17 +8,10 @@ import {
   extractFacts,
   factEmbeddingText,
 } from "../llm";
-import {
-  buildChunks,
-  pageTexts,
-  type UnstructuredElement,
-} from "./chunk-builder";
+import { buildChunks, type ParsedPage } from "./chunk-builder";
 import { parsePdf } from "./parse";
 
-type ParseFn = (
-  bytes: Uint8Array,
-  filename: string,
-) => Promise<UnstructuredElement[]>;
+type ParseFn = (bytes: Uint8Array) => Promise<ParsedPage[]>;
 type ExtractFn = (text: string, sessionId: string) => Promise<ExtractedFact[]>;
 type EmbedFn = (values: string[]) => Promise<number[][]>;
 
@@ -42,12 +35,9 @@ export async function ingestDocument(
     const bytes = new Uint8Array(await response.arrayBuffer());
 
     const parse = deps.parse ?? parsePdf;
-    const elements = await parse(bytes, doc.filename);
-    const drafts = buildChunks(elements);
-    const pageCount = Math.max(
-      0,
-      ...elements.map((e) => e.metadata?.page_number ?? 0),
-    );
+    const parsedPages = await parse(bytes);
+    const drafts = buildChunks(parsedPages);
+    const pageCount = parsedPages.length;
 
     await db.delete(chunks).where(eq(chunks.documentId, documentId));
     if (drafts.length > 0) {
@@ -57,7 +47,7 @@ export async function ingestDocument(
     await markDocument(documentId, "extracting");
     const extract = deps.extract ?? extractFacts;
     const embed = deps.embed ?? embedFacts;
-    const pages = new Map(pageTexts(elements).map((p) => [p.page, p.text]));
+    const pages = new Map(parsedPages.map((p) => [p.page, p.text] as const));
 
     const extracted: ExtractedFact[] = [];
     for (const chunk of drafts) {
