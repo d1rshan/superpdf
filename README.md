@@ -1,36 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# superpdf
 
-## Getting Started
+A fact knowledge layer for PDFs. Upload documents, extract grounded facts with evidence and page numbers, then compare facts across documents for corroboration, contradiction, and context.
 
-First, run the development server:
+## Setup and Run
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
+bun install
+cp .env.example .env.local
+bun db:migrate
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Run Inngest locally with:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+bunx inngest-cli dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Video Demo
 
-## Learn More
+> The demo video is longer than the requested 3 minutes because my OpenAI API credits ran out before I could showcase the complete end-to-end flow. The video therefore also walks through the database, architecture, and internal pipeline.
 
-To learn more about Next.js, take a look at the following resources:
+[🎥 Demo Video](https://d1rshan.me/superjoin.mp4)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Approach
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Pipeline.** Upload → parse per-page Markdown → chunk by page groups → extract citable facts → embed → store in pgvector.
 
-## Deploy on Vercel
+**Resolution.** Retrieve similar facts within the selected Topic, batch candidate pairs, and use an LLM to classify them as `SAME_FACT`, `CONTRADICTS`, or `CONTEXTUALIZES`, with an explanation and confidence.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**Architecture.**
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+<img width="2116" height="2244" alt="archi" src="https://github.com/user-attachments/assets/2dde29be-4e4f-4f3d-b039-c3f29a59bfd6" />
+
+* Next.js 16 + TypeScript + Tailwind v4 + Bun, deployed on Vercel
+* Neon Postgres + Drizzle ORM + pgvector
+* Inngest for background ingest/resolve pipelines
+* Vercel Blob for raw PDFs and cited-page rendering
+* Model/provider configuration through environment variables
+
+**Key decisions and trade-offs:**
+
+* Store facts exactly as stated; unit, period, and scope reasoning is handled during comparison.
+* Use embedding similarity to filter candidate pairs and batch LLM comparisons instead of comparing every fact pair.
+* Scope knowledge to each Topic and recompute on regeneration.
+* End-to-end pipeline tests use real Postgres with external providers stubbed, using Vitest.
+
+**AI tools used:** `mimo-v2.5` for extraction/comparison and OpenAI `text-embedding-3-small` for embeddings.
+
+## Limitations and Next Steps
+
+**Known issues:**
+
+* **Speed.** Processing large PDFs and running batched LLM comparisons can take several minutes due to parsing and rate limits.
+
+**Next Steps:**
+
+Caching and incremental resolution (only re-compare facts from new/changed documents) to cut both latency and cost.
+A faster or streaming gateway model; parallelized extraction with higher concurrency.
+
+## Additional Notes
+
+* The video is ~10 minutes instead of the requested ≤3 minutes because I ran out of OpenAI API credits and could not demonstrate the complete flow end-to-end. I therefore used the video to also explain the database, architecture, and internal pipeline.
